@@ -339,6 +339,16 @@ LEADS_WORKFLOW_TOOL_DEFINITIONS: list[ToolDefinition] = [
 ]
 
 
+# The duplicate-resolution action remains visible for review but is not part
+# of the governed catalog until its provider contract is registered.
+QUARANTINED_LEADS_WORKFLOW_TOOL_DEFINITIONS: list[ToolDefinition] = [
+    LEADS_WORKFLOW_TOOL_DEFINITIONS[-1]
+]
+REGISTERED_LEADS_WORKFLOW_TOOL_DEFINITIONS: list[ToolDefinition] = (
+    LEADS_WORKFLOW_TOOL_DEFINITIONS[:-1]
+)
+
+
 def get_leads_workflow_tools() -> list[ToolDefinition]:
     """Return the harness-neutral leads-workflow tool definitions.
 
@@ -350,6 +360,8 @@ def get_leads_workflow_tools() -> list[ToolDefinition]:
 
 __all__ = [
     "LEADS_WORKFLOW_TOOL_DEFINITIONS",
+    "QUARANTINED_LEADS_WORKFLOW_TOOL_DEFINITIONS",
+    "REGISTERED_LEADS_WORKFLOW_TOOL_DEFINITIONS",
     "ApprovalInfo",
     "ApprovalStatus",
     "DuplicateAction",

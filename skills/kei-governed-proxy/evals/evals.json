@@ -1,0 +1,23 @@
+{
+  "skill_name": "kei-governed-proxy",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Add a Discord tool that reads a CRM lead and creates a Linear follow-up task with approval.",
+      "expected_output": "A plan or implementation that routes both operations through the tenant-side proxy, derives scope from the harness key, redacts CRM fields, requires consent and approval, and tests idempotency and audit redaction.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "A legacy tool has a local role permission and a provider client handler but no connector manifest. Decide whether it can ship.",
+      "expected_output": "The tool is rejected or quarantined until canonical registration, proxy reachability, policy tests, and provider-boundary tests exist; local permission is not treated as authorization.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Review a connector tool schema for tenant_id, workspace_id, an API token in binding metadata, and a direct provider handler.",
+      "expected_output": "The review identifies all four contract violations and proposes delegated scope, opaque references, handlerless schema metadata, and fail-closed proxy execution.",
+      "files": []
+    }
+  ]
+}

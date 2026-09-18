@@ -47,6 +47,7 @@ class Permission(str, Enum):
     CRM_READ = "crm_read"
     CRM_WRITE = "crm_write"
     LINEAR_READ = "linear_read"
+    LINEAR_WRITE = "linear_write"
     DRIVE_READ = "drive_read"
     S3_READ = "s3_read"
     HTTP_API_READ = "http_api_read"
@@ -649,12 +650,16 @@ def _unique_tools(*collections: list[ToolDefinition]) -> list[ToolDefinition]:
 from agents.connectors import CONNECTOR_READ_TOOL_DEFINITIONS
 from agents.crm.tools import CRM_TOOL_DEFINITIONS
 from agents.github.tools import GITHUB_TOOL_DEFINITIONS
+from agents.workflows.crm_linear_followup import CRM_LINEAR_FOLLOWUP_TOOL_DEFINITIONS
+from agents.workflows.leads import REGISTERED_LEADS_WORKFLOW_TOOL_DEFINITIONS
 
 ALL_TOOL_DEFINITIONS = _unique_tools(
     TOOL_DEFINITIONS,
     CONNECTOR_READ_TOOL_DEFINITIONS,
     CRM_TOOL_DEFINITIONS,
     GITHUB_TOOL_DEFINITIONS,
+    REGISTERED_LEADS_WORKFLOW_TOOL_DEFINITIONS,
+    CRM_LINEAR_FOLLOWUP_TOOL_DEFINITIONS,
 )
 
 
