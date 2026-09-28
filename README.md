@@ -159,6 +159,7 @@ All contributors must be approved by existing maintainers. See [CONTRIBUTORS](CO
 
 ### Design Documents
 
+- [Workflow Spec Validation](docs/workflow-validation.md) - structural rules `validate_read_first` enforces: cycles, reachability-based approval gates, typed permissions, egress classification
 - [npm Distribution Strategy](docs/npm-distribution-strategy.md) - proposal for publishing a JS/TypeScript consumable, plus Go distribution as a separate workstream (not approved)
 
 ## License
