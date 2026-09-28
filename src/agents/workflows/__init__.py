@@ -1,7 +1,8 @@
 """Workflow specifications for Kei agents.
 
 Workflows define typed, harness-neutral step DAGs that compose governed
-connector capabilities (Drive, CRM, Linear) into domain-specific processes.
+connector capabilities (Drive, CRM, Linear) into domain-specific processes
+(finance, fundraising, GitHub PR review, leads).
 Each step captures domain intent only; the harness resolves bindings,
 enforces policy, and invokes provider adapters.
 """
@@ -28,6 +29,23 @@ from agents.workflows.finance import (
     invoice_processing_workflow,
     validate_read_first,
     vendor_onboarding_workflow,
+)
+from agents.workflows.fundraising import (
+    FUNDRAISING_WORKFLOW_SPECS,
+    DataRoomRead,
+    DataRoomShare,
+    FundraisingWorkflowSpec,
+    FundraisingWorkflowStep,
+    InvestorLookup,
+    InvestorPipelineRead,
+    InvestorStage,
+    InvestorStageUpdate,
+    data_room_share_workflow,
+    fundraising_egress_steps,
+    investor_decision_workflow,
+    investor_outreach_workflow,
+    is_valid_stage_transition,
+    validate_fundraising_workflow,
 )
 from agents.workflows.github_pr_review import (
     PR_REVIEW_TOOL_DEPENDENCIES,
@@ -85,6 +103,7 @@ def __getattr__(name: str) -> object:
 __all__ = [
     "CRM_LINEAR_FOLLOWUP_TOOL_DEFINITIONS",
     "FINANCE_WORKFLOW_SPECS",
+    "FUNDRAISING_WORKFLOW_SPECS",
     "LEADS_WORKFLOW_TOOL_DEFINITIONS",
     "LINEAR_CREATE_FOLLOWUP_TOOL",
     "PR_REVIEW_TOOL_DEPENDENCIES",
@@ -96,6 +115,8 @@ __all__ = [
     "ApprovalStatus",
     "CRMLookup",
     "CRMUpdate",
+    "DataRoomRead",
+    "DataRoomShare",
     "DriveArchive",
     "DriveRead",
     "DuplicateAction",
@@ -107,6 +128,12 @@ __all__ = [
     "FinanceWorkflowSpec",
     "FinanceWorkflowState",
     "FinanceWorkflowStep",
+    "FundraisingWorkflowSpec",
+    "FundraisingWorkflowStep",
+    "InvestorLookup",
+    "InvestorPipelineRead",
+    "InvestorStage",
+    "InvestorStageUpdate",
     "LeadWorkflowStatus",
     "LinearTask",
     "Notify",
@@ -119,10 +146,16 @@ __all__ = [
     "ReviewAction",
     "ReviewActionKind",
     "StepPayload",
+    "data_room_share_workflow",
     "egress_steps",
     "expense_report_workflow",
+    "fundraising_egress_steps",
     "get_leads_workflow_tools",
+    "investor_decision_workflow",
+    "investor_outreach_workflow",
     "invoice_processing_workflow",
+    "is_valid_stage_transition",
+    "validate_fundraising_workflow",
     "validate_read_first",
     "vendor_onboarding_workflow",
 ]

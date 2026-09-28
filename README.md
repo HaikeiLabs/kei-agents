@@ -121,6 +121,18 @@ permissions, unknown tools, tools whose permission is not granted, and any
 `finance_approve` and `fundraising_approve` exist for workflow approval gates
 and are held by human approvers only.
 
+### Fundraising Workflow Spec
+
+`agents.workflows.fundraising` is a harness-neutral fundraising spec. The
+investor pipeline is `prospect → contacted → meeting → diligence → committed`,
+and any open stage can move to `passed`. There are three canonical workflows:
+`fundraising.investor_outreach`, `fundraising.data_room_share`, and
+`fundraising.investor_decision`. Each one reads from CRM or the Drive data room
+first, then places every data-room share, stage change, Linear follow-up, and
+notification after a `fundraising_approve` gate.
+`validate_fundraising_workflow` checks the spec structure; see
+[docs/workflow-validation.md](docs/workflow-validation.md).
+
 ## Development
 
 ```bash

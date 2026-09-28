@@ -7,6 +7,12 @@ particular subject may run a step, and whether a given egress needs an
 approval in a given tenant, is decided at invocation time by ABAC and the
 tenant-side proxy PEP (ADR-011).
 
+`validate_fundraising_workflow` (in `agents.workflows.fundraising`) applies
+the same rules with fundraising payloads and permissions (`fundraising_write`
+for mutations, `fundraising_approve` for gates). It also rejects any
+`InvestorStageUpdate` that is not a valid pipeline transition
+(`<id>: invalid stage transition prospect -> committed`).
+
 ## Rules
 
 | Rule | Violation message |
@@ -15,10 +21,10 @@ tenant-side proxy PEP (ADR-011).
 | Every `depends_on` entry names a step in the spec | `<id>: depends_on '<dep>' not found in steps` |
 | The dependency graph is acyclic (self-loops included) | `dependency cycle: a -> b -> a` |
 | `permission` is a `Permission` member, never a bare string | `<id>: permission must be a Permission member, got bare '<value>'` |
-| A mutation (`CRMUpdate`, `DriveArchive`) holds `finance_write` or `finance_approve` | `<id>: mutation step requires finance_write or finance_approve permission, ...` |
-| A mutation has a read step (`DriveRead`, `CRMLookup`) among its ancestors | `<id>: mutation step must depend on a read step` |
+| A mutation (finance: `CRMUpdate`, `DriveArchive`; fundraising: `DataRoomShare`, `InvestorStageUpdate`) holds the domain write permission | `<id>: mutation step requires finance_write or finance_approve permission, ...` |
+| A mutation has a read step (finance: `DriveRead`, `CRMLookup`; fundraising: `InvestorLookup`, `InvestorPipelineRead`, `DataRoomRead`) among its ancestors | `<id>: mutation step must depend on a read step` |
 | A mutation has an `ApprovalGate` among its ancestors | `<id>: mutation step must depend on an approval gate` |
-| An `ApprovalGate` holds `finance_approve` | `<id>: approval gate requires finance_approve permission, ...` |
+| An `ApprovalGate` holds the domain approve permission (`finance_approve`, `fundraising_approve`) | `<id>: approval gate requires finance_approve permission, ...` |
 
 When the spec has a cycle, the validator reports it and stops. Gate and read
 findings from inside a cycle would only add noise to the real defect.
@@ -52,8 +58,9 @@ policy that actually runs (decision 2026-09-19, reconfirmed 2026-09-28 for
 HAI-205).
 
 Canonical specs may still place an approval gate upstream of an egress step
-where the workflow's intent calls for one. That is a property of the spec, and
-tests can pin it, but the validator does not require it.
+where the workflow's intent calls for one. The canonical fundraising specs gate
+every data-room share, stage change, Linear follow-up, and notification this
+way, and tests pin it. The validator does not require it.
 
 ## Typed permissions
 
