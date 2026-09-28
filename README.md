@@ -75,7 +75,7 @@ See `src/agents/tool_definitions.py` for full list.
 ### Governed Connector Read Schemas
 
 Provider-neutral, schema-only read capabilities for governed connectors
-(GitHub, Linear, Google Drive/Docs, S3, http_api/CRM). Each schema expresses a
+(GitHub, Linear, Google Drive/Docs, S3, http_api/CRM, Gmail, Tito). Each schema expresses a
 capability/resource/action binding and a delegated-context contract; it carries
 no credentials, arbitrary URLs, tenant identifiers, or handlers — execution is
 delegated to the tenant-side distributed proxy. See
@@ -97,6 +97,29 @@ delegated to the tenant-side distributed proxy. See
 | s3.get_object_metadata | s3 | objects | s3_read |
 | http_api.list_records | http_api | records | http_api_read |
 | http_api.get_record | http_api | records | http_api_read |
+| gmail.search_messages | gmail | messages | gmail_read |
+| gmail.get_message | gmail | messages | gmail_read |
+| tito.list_events | tito | events | tito_read |
+| tito.get_event | tito | events | tito_read |
+| tito.list_releases | tito | releases | tito_read |
+| tito.get_ticket_summary | tito | tickets | tito_read |
+
+### Harness Agent Definitions
+
+`agents.agent_definitions` declares each harness agent's grant surface as data:
+typed `Permission` members, the subset that needs a human approval, and the
+catalog tools it exposes. `validate_agent_definitions` rejects bare-string
+permissions, unknown tools, tools whose permission is not granted, and any
+`*_approve` permission (approvals are resolved by a human, never the agent).
+
+| Agent | Harness | Permissions | Approval required |
+|-------|---------|-------------|-------------------|
+| `pde_search_agent` | `pde` | `drive_read`, `notion_read`, `gmail_read`, `tito_read` | — |
+| `pedro` | `discord` | `github_read`, `github_write`, `crm_read`, `crm_write`, `linear_read`, `linear_write`, `drive_read`, `fundraising_read`, `fundraising_write`, `finance_read`, `finance_write` | `linear_write`, `fundraising_write`, `finance_write` |
+| `dvl_assistant` | `assistant` | `search_wiki`, `web_search`, `project_hours_read`, `semantic_model_read` | — |
+
+`finance_approve` and `fundraising_approve` exist for workflow approval gates
+and are held by human approvers only.
 
 ## Development
 

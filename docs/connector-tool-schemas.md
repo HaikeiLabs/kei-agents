@@ -49,6 +49,15 @@ Each governed connector read schema expresses four things:
 | Google Drive/Docs | `drive_read` | `drive` | `drive.list_files`, `drive.get_file`, `docs.get_document` | `tenant_id`, `drive_id` |
 | S3        | `s3_read`       | `s3`       | `s3.list_objects`, `s3.get_object`, `s3.get_object_metadata` | `tenant_id`, `bucket` |
 | http_api/CRM | `http_api_read` | `http_api` | `http_api.list_records`, `http_api.get_record` | `tenant_id` |
+| Gmail     | `gmail_read`    | `gmail`    | `gmail.search_messages`, `gmail.get_message` | `tenant_id`, `mailbox` |
+| Tito      | `tito_read`     | `tito`     | `tito.list_events`, `tito.get_event`, `tito.list_releases`, `tito.get_ticket_summary` | `tenant_id`, `account` |
+
+Gmail reads return message metadata and snippet only; the full body is
+released only when ABAC authorizes the `gmail_include_body` policy attribute,
+so it is never an agent parameter. Tito reads never return attendee PII;
+`tito.get_ticket_summary` is aggregate counts by state/type. Both map to the
+kei-policy-catalog `gmail` (`message.search`, `message.get`) and `tito`
+(`event.list`, `event.get`, `release.list`, `ticket.summary`) capabilities.
 
 `connector_id` values (`conn_github_1`, `conn_linear_1`, ...) are placeholders
 that reference `abac.connection_presets.id`; the tenant-side proxy resolves the
