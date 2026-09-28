@@ -1,6 +1,7 @@
 # Workflow spec validation
 
-`validate_read_first` (in `agents.workflows.finance`) checks the **structure**
+`validate_read_first` (in `agents.workflows.finance`), built on the shared
+`validate_step_graph` (in `agents.workflows.step_graph`), checks the **structure**
 of a workflow spec. A spec that passes is well formed, not permitted: whether a
 particular subject may run a step, and whether a given egress needs an
 approval in a given tenant, is decided at invocation time by ABAC and the
