@@ -52,6 +52,8 @@ class Permission(str, Enum):
     S3_READ = "s3_read"
     HTTP_API_READ = "http_api_read"
     NOTION_READ = "notion_read"
+    GMAIL_READ = "gmail_read"
+    TITO_READ = "tito_read"
 
 
 class ToolCategory(str, Enum):
@@ -67,6 +69,8 @@ class ToolCategory(str, Enum):
     S3 = "s3"
     HTTP_API = "http_api"
     NOTION = "notion"
+    GMAIL = "gmail"
+    TITO = "tito"
 
 
 @dataclass

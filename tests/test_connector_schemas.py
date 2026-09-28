@@ -34,6 +34,12 @@ CONNECTOR_NAMES = {
     "notion.get_page",
     "notion.list_databases",
     "notion.get_database",
+    "gmail.search_messages",
+    "gmail.get_message",
+    "tito.list_events",
+    "tito.get_event",
+    "tito.list_releases",
+    "tito.get_ticket_summary",
 }
 
 READ_PERMISSIONS = {
@@ -43,6 +49,8 @@ READ_PERMISSIONS = {
     Permission.S3_READ,
     Permission.HTTP_API_READ,
     Permission.NOTION_READ,
+    Permission.GMAIL_READ,
+    Permission.TITO_READ,
 }
 
 CATEGORIES = {
@@ -52,6 +60,8 @@ CATEGORIES = {
     ToolCategory.S3,
     ToolCategory.HTTP_API,
     ToolCategory.NOTION,
+    ToolCategory.GMAIL,
+    ToolCategory.TITO,
 }
 
 

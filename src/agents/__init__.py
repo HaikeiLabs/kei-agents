@@ -3,7 +3,7 @@
 This package provides:
 - Tool definitions with multi-model format support (OpenAI, Anthropic, Ollama)
 - Provider-neutral read schemas for governed connectors (GitHub, Linear,
-  Google Drive/Docs, S3, http_api/CRM, Notion)
+  Google Drive/Docs, S3, http_api/CRM, Notion, Gmail, Tito)
 - CRM tools for lead management (mock adapter)
 - GitHub tools for issue/PR management (with governance)
 - Permission-based access control
@@ -70,10 +70,12 @@ from agents.connectors import (
     CONNECTOR_READ_TOOL_DEFINITIONS,
     DRIVE_READ_TOOL_DEFINITIONS,
     GITHUB_READ_TOOL_DEFINITIONS,
+    GMAIL_READ_TOOL_DEFINITIONS,
     HTTP_API_READ_TOOL_DEFINITIONS,
     LINEAR_READ_TOOL_DEFINITIONS,
     NOTION_READ_TOOL_DEFINITIONS,
     S3_READ_TOOL_DEFINITIONS,
+    TITO_READ_TOOL_DEFINITIONS,
 )
 
 # Imported after connectors so the workflow registry's module-level
@@ -103,11 +105,13 @@ __all__ = [
     "CONNECTOR_READ_TOOL_DEFINITIONS",
     "DRIVE_READ_TOOL_DEFINITIONS",
     "GITHUB_READ_TOOL_DEFINITIONS",
+    "GMAIL_READ_TOOL_DEFINITIONS",
     "HTTP_API_READ_TOOL_DEFINITIONS",
     "LINEAR_READ_TOOL_DEFINITIONS",
     "NOTION_READ_TOOL_DEFINITIONS",
     "PR_REVIEW_TOOL_DEPENDENCIES",
     "S3_READ_TOOL_DEFINITIONS",
+    "TITO_READ_TOOL_DEFINITIONS",
     "TOOL_DEFINITIONS",
     "WORKFLOW_DEFINITIONS",
     "AuthorizationResult",

@@ -75,7 +75,7 @@ See `src/agents/tool_definitions.py` for full list.
 ### Governed Connector Read Schemas
 
 Provider-neutral, schema-only read capabilities for governed connectors
-(GitHub, Linear, Google Drive/Docs, S3, http_api/CRM). Each schema expresses a
+(GitHub, Linear, Google Drive/Docs, S3, http_api/CRM, Gmail, Tito). Each schema expresses a
 capability/resource/action binding and a delegated-context contract; it carries
 no credentials, arbitrary URLs, tenant identifiers, or handlers — execution is
 delegated to the tenant-side distributed proxy. See
@@ -97,6 +97,12 @@ delegated to the tenant-side distributed proxy. See
 | s3.get_object_metadata | s3 | objects | s3_read |
 | http_api.list_records | http_api | records | http_api_read |
 | http_api.get_record | http_api | records | http_api_read |
+| gmail.search_messages | gmail | messages | gmail_read |
+| gmail.get_message | gmail | messages | gmail_read |
+| tito.list_events | tito | events | tito_read |
+| tito.get_event | tito | events | tito_read |
+| tito.list_releases | tito | releases | tito_read |
+| tito.get_ticket_summary | tito | tickets | tito_read |
 
 ## Development
 
