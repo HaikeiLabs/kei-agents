@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from agents import Permission
 from agents.workflows.finance import (
     FINANCE_WORKFLOW_SPECS,
     ApprovalGate,
@@ -233,7 +234,7 @@ class TestReadFirstValidation:
                     payload=CRMUpdate(
                         entity_type="customer", record_id="123", updates={}
                     ),
-                    permission="finance_write",
+                    permission=Permission.FINANCE_WRITE,
                 ),
             ],
         )
@@ -258,7 +259,7 @@ class TestReadFirstValidation:
                     payload=CRMUpdate(
                         entity_type="customer", record_id="123", updates={}
                     ),
-                    permission="finance_write",
+                    permission=Permission.FINANCE_WRITE,
                     depends_on=["read"],
                 ),
             ],
@@ -285,7 +286,7 @@ class TestReadFirstValidation:
                         entity_type="customer", record_id="123", updates={}
                     ),
                     depends_on=["read"],
-                    permission="finance_read",
+                    permission=Permission.FINANCE_READ,
                 ),
             ],
         )
@@ -302,7 +303,7 @@ class TestReadFirstValidation:
                     step_id="approve",
                     description="Approve",
                     payload=ApprovalGate(),
-                    permission="finance_read",
+                    permission=Permission.FINANCE_READ,
                 ),
             ],
         )
@@ -396,7 +397,7 @@ def _gate(step_id: str, depends_on: list[str] | None = None) -> FinanceWorkflowS
         step_id=step_id,
         description="gate",
         payload=ApprovalGate(),
-        permission="finance_approve",
+        permission=Permission.FINANCE_APPROVE,
         depends_on=depends_on or [],
     )
 
@@ -406,7 +407,7 @@ def _mutation(step_id: str, depends_on: list[str]) -> FinanceWorkflowStep:
         step_id=step_id,
         description="mutate",
         payload=CRMUpdate(entity_type="customer", record_id="c-1", updates={}),
-        permission="finance_write",
+        permission=Permission.FINANCE_WRITE,
         depends_on=depends_on,
     )
 

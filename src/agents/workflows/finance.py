@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Literal
 
+from agents.tool_definitions import Permission
+
 
 class FinanceEntity(str, Enum):
     """Entities in the finance/bookkeeping domain."""
@@ -163,7 +165,7 @@ class FinanceWorkflowStep:
     description: str
     payload: StepPayload
     depends_on: list[str] = field(default_factory=list)
-    permission: str = "finance_read"
+    permission: Permission = Permission.FINANCE_READ
 
 
 @dataclass
@@ -362,11 +364,24 @@ def validate_read_first(spec: FinanceWorkflowSpec) -> list[str]:
         return violations
 
     for step in spec.steps:
+        # Permission is a str enum, so a bare "finance_write" compares equal to
+        # Permission.FINANCE_WRITE; check the type so typos and untyped values
+        # cannot slip past the policy engine.
+        if not isinstance(step.permission, Permission):
+            violations.append(
+                f"{step.step_id}: permission must be a Permission member, "
+                f"got bare {step.permission!r}"
+            )
+            continue
         if _is_mutation(step.payload):
-            if step.permission not in ("finance_write", "finance_approve"):
+            if step.permission not in (
+                Permission.FINANCE_WRITE,
+                Permission.FINANCE_APPROVE,
+            ):
                 violations.append(
                     f"{step.step_id}: mutation step requires "
-                    f"finance_write or finance_approve permission, got {step.permission!r}"
+                    "finance_write or finance_approve permission, "
+                    f"got {step.permission.value!r}"
                 )
             if not _depends_on_read(step, by_id):
                 violations.append(
@@ -379,11 +394,11 @@ def validate_read_first(spec: FinanceWorkflowSpec) -> list[str]:
 
         if (
             isinstance(step.payload, ApprovalGate)
-            and step.permission != "finance_approve"
+            and step.permission is not Permission.FINANCE_APPROVE
         ):
             violations.append(
                 f"{step.step_id}: approval gate requires "
-                f"finance_approve permission, got {step.permission!r}"
+                f"finance_approve permission, got {step.permission.value!r}"
             )
 
     return violations
@@ -444,7 +459,7 @@ def invoice_processing_workflow() -> FinanceWorkflowSpec:
                     required_role="finance_approver",
                     reason="Invoice requires financial approval before payment",
                 ),
-                permission="finance_approve",
+                permission=Permission.FINANCE_APPROVE,
                 depends_on=["create_review_task"],
             ),
             FinanceWorkflowStep(
@@ -455,7 +470,7 @@ def invoice_processing_workflow() -> FinanceWorkflowSpec:
                     record_id="",
                     updates={"payment_status": "paid"},
                 ),
-                permission="finance_write",
+                permission=Permission.FINANCE_WRITE,
                 depends_on=["approval", "lookup_customer"],
             ),
             FinanceWorkflowStep(
@@ -465,7 +480,7 @@ def invoice_processing_workflow() -> FinanceWorkflowSpec:
                     entity=FinanceEntity.INVOICE,
                     document_id="",
                 ),
-                permission="finance_write",
+                permission=Permission.FINANCE_WRITE,
                 depends_on=["approval", "read_invoice"],
             ),
             FinanceWorkflowStep(
@@ -531,7 +546,7 @@ def expense_report_workflow() -> FinanceWorkflowSpec:
                     reason="Expense report requires manager approval",
                     timeout_hours=48,
                 ),
-                permission="finance_approve",
+                permission=Permission.FINANCE_APPROVE,
                 depends_on=["create_audit_task"],
             ),
             FinanceWorkflowStep(
@@ -541,7 +556,7 @@ def expense_report_workflow() -> FinanceWorkflowSpec:
                     entity=FinanceEntity.RECEIPT,
                     document_id="",
                 ),
-                permission="finance_write",
+                permission=Permission.FINANCE_WRITE,
                 depends_on=["approval", "read_receipts"],
             ),
             FinanceWorkflowStep(
@@ -610,7 +625,7 @@ def vendor_onboarding_workflow() -> FinanceWorkflowSpec:
                     reason="New vendor requires financial approval",
                     escalation_role="finance_manager",
                 ),
-                permission="finance_approve",
+                permission=Permission.FINANCE_APPROVE,
                 depends_on=["create_onboarding_task"],
             ),
             FinanceWorkflowStep(
@@ -621,7 +636,7 @@ def vendor_onboarding_workflow() -> FinanceWorkflowSpec:
                     record_id="",
                     updates={"status": "approved"},
                 ),
-                permission="finance_write",
+                permission=Permission.FINANCE_WRITE,
                 depends_on=["approval", "create_vendor_record"],
             ),
             FinanceWorkflowStep(
@@ -631,7 +646,7 @@ def vendor_onboarding_workflow() -> FinanceWorkflowSpec:
                     entity=FinanceEntity.VENDOR,
                     document_id="",
                 ),
-                permission="finance_write",
+                permission=Permission.FINANCE_WRITE,
                 depends_on=["approval", "read_vendor_docs"],
             ),
             FinanceWorkflowStep(
