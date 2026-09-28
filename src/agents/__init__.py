@@ -7,6 +7,7 @@ This package provides:
 - CRM tools for lead management (mock adapter)
 - GitHub tools for issue/PR management (with governance)
 - Permission-based access control
+- Harness agent definitions (PDE search agent, Pedro, DVL Assistant)
 - Harness-neutral workflow registry for discovering workflows by tool or
   connector dependency
 - Harness-neutral composable workflow definitions
@@ -22,6 +23,17 @@ Usage:
     workflows = registry.discover_by_tool("github.get_repository")
 """
 
+from agents.agent_definitions import (
+    ASSISTANT_LANE_PERMISSIONS,
+    DVL_ASSISTANT_AGENT,
+    HARNESS_AGENT_DEFINITIONS,
+    PDE_SEARCH_AGENT,
+    PEDRO_AGENT,
+    AgentDefinition,
+    Harness,
+    get_agent_tools,
+    validate_agent_definitions,
+)
 from agents.crm import (
     CRMAdapter,
     Lead,
@@ -102,21 +114,28 @@ from agents.workflows import (
 
 __all__ = [
     "ALL_TOOL_DEFINITIONS",
+    "ASSISTANT_LANE_PERMISSIONS",
     "CONNECTOR_READ_TOOL_DEFINITIONS",
     "DRIVE_READ_TOOL_DEFINITIONS",
+    "DVL_ASSISTANT_AGENT",
     "GITHUB_READ_TOOL_DEFINITIONS",
     "GMAIL_READ_TOOL_DEFINITIONS",
+    "HARNESS_AGENT_DEFINITIONS",
     "HTTP_API_READ_TOOL_DEFINITIONS",
     "LINEAR_READ_TOOL_DEFINITIONS",
     "NOTION_READ_TOOL_DEFINITIONS",
+    "PDE_SEARCH_AGENT",
+    "PEDRO_AGENT",
     "PR_REVIEW_TOOL_DEPENDENCIES",
     "S3_READ_TOOL_DEFINITIONS",
     "TITO_READ_TOOL_DEFINITIONS",
     "TOOL_DEFINITIONS",
     "WORKFLOW_DEFINITIONS",
+    "AgentDefinition",
     "AuthorizationResult",
     "CRMAdapter",
     "GovernanceConfig",
+    "Harness",
     "Lead",
     "LeadSource",
     "LeadStatus",
@@ -144,6 +163,7 @@ __all__ = [
     "create_user_context",
     "detect_model_format",
     "filter_accessible_tools",
+    "get_agent_tools",
     "get_tool_by_name",
     "get_tools_by_category",
     "get_tools_by_permission",
@@ -152,5 +172,6 @@ __all__ = [
     "render_ollama_tools",
     "render_openai_tools",
     "render_tools",
+    "validate_agent_definitions",
     "validate_tool_definitions",
 ]
