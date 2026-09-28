@@ -17,6 +17,7 @@ from enum import Enum
 from typing import Literal
 
 from agents.tool_definitions import Permission
+from agents.workflows.step_graph import validate_step_graph
 
 
 class FinanceEntity(str, Enum):
@@ -206,16 +207,8 @@ _EGRESS_PAYLOAD_TYPES = (LinearTask, Notify)
 _READ_PAYLOAD_TYPES = (DriveRead, CRMLookup)
 
 
-def _is_mutation(payload: StepPayload) -> bool:
-    return isinstance(payload, _MUTATION_PAYLOAD_TYPES)
-
-
 def _is_egress(payload: StepPayload) -> bool:
     return isinstance(payload, _EGRESS_PAYLOAD_TYPES)
-
-
-def _is_read(payload: StepPayload) -> bool:
-    return isinstance(payload, _READ_PAYLOAD_TYPES)
 
 
 def egress_steps(spec: FinanceWorkflowSpec) -> list[FinanceWorkflowStep]:
@@ -227,97 +220,6 @@ def egress_steps(spec: FinanceWorkflowSpec) -> list[FinanceWorkflowStep]:
     the policy decision point.
     """
     return [step for step in spec.steps if _is_egress(step.payload)]
-
-
-def _find_cycle(spec: FinanceWorkflowSpec) -> list[str] | None:
-    """Return one dependency cycle as a list of step ids, or None if acyclic.
-
-    A spec is a DAG by contract. Nothing enforced that, so a cycle would reach
-    a harness interpreter and hang it rather than being rejected here.
-    """
-    dependencies = {
-        step.step_id: [d for d in step.depends_on if d != step.step_id]
-        for step in spec.steps
-    }
-    # Self-dependency is a cycle of length one; report it directly since the
-    # traversal below skips it to keep the walk simple.
-    for step in spec.steps:
-        if step.step_id in step.depends_on:
-            return [step.step_id, step.step_id]
-
-    WHITE, GREY, BLACK = 0, 1, 2
-    colour = dict.fromkeys(dependencies, WHITE)
-
-    def walk(node: str, path: list[str]) -> list[str] | None:
-        colour[node] = GREY
-        path.append(node)
-        for dep in dependencies.get(node, ()):
-            if dep not in colour:
-                continue  # unknown dep: reported separately as a dangling edge
-            if colour[dep] == GREY:
-                return path[path.index(dep) :] + [dep]
-            if colour[dep] == WHITE:
-                found = walk(dep, path)
-                if found is not None:
-                    return found
-        path.pop()
-        colour[node] = BLACK
-        return None
-
-    for node in dependencies:
-        if colour[node] == WHITE:
-            cycle = walk(node, [])
-            if cycle is not None:
-                return cycle
-    return None
-
-
-def _gated_by_approval(
-    step: FinanceWorkflowStep, by_id: dict[str, FinanceWorkflowStep]
-) -> bool:
-    """Report whether an ApprovalGate is reachable from *step*'s dependencies.
-
-    The gate may be any ancestor, not only a direct dependency. Requiring a
-    direct edge would mean a step that legitimately depends on an intermediate
-    read could not be gated without also naming the gate, which authors get
-    wrong in the direction of removing the intermediate step rather than adding
-    the edge. Reachability keeps the guarantee -- the gate is still upstream of
-    the step, so it still blocks -- while allowing the natural shape.
-    """
-    seen: set[str] = set()
-    frontier = list(step.depends_on)
-    while frontier:
-        current = frontier.pop()
-        if current in seen:
-            continue
-        seen.add(current)
-        dependency = by_id.get(current)
-        if dependency is None:
-            continue
-        if isinstance(dependency.payload, ApprovalGate):
-            return True
-        frontier.extend(dependency.depends_on)
-    return False
-
-
-def _depends_on_read(
-    step: FinanceWorkflowStep, by_id: dict[str, FinanceWorkflowStep]
-) -> bool:
-    """Report whether a read step is reachable from *step*'s dependencies."""
-    seen: set[str] = set()
-    frontier = list(step.depends_on)
-    while frontier:
-        current = frontier.pop()
-        if current in seen:
-            continue
-        seen.add(current)
-        dependency = by_id.get(current)
-        if dependency is None:
-            continue
-        if _is_read(dependency.payload):
-            return True
-        frontier.extend(dependency.depends_on)
-    return False
 
 
 def validate_read_first(spec: FinanceWorkflowSpec) -> list[str]:
@@ -339,69 +241,14 @@ def validate_read_first(spec: FinanceWorkflowSpec) -> list[str]:
 
     Returns a list of violations; an empty list means the spec is valid.
     """
-    violations: list[str] = []
-    by_id: dict[str, FinanceWorkflowStep] = {}
-
-    for step in spec.steps:
-        if step.step_id in by_id:
-            violations.append(f"{step.step_id}: duplicate step_id")
-        by_id[step.step_id] = step
-
-    for step in spec.steps:
-        for dep in step.depends_on:
-            if dep not in by_id:
-                violations.append(
-                    f"{step.step_id}: depends_on {dep!r} not found in steps"
-                )
-
-    cycle = _find_cycle(spec)
-    if cycle is not None:
-        violations.append(f"dependency cycle: {' -> '.join(cycle)}")
-        # Reachability checks below assume an acyclic graph is meaningful to
-        # traverse. The traversals terminate regardless, but reporting
-        # gate/read findings from inside a cycle would be noise on top of the
-        # real defect, so stop here.
-        return violations
-
-    for step in spec.steps:
-        # Permission is a str enum, so a bare "finance_write" compares equal to
-        # Permission.FINANCE_WRITE; check the type so typos and untyped values
-        # cannot slip past the policy engine.
-        if not isinstance(step.permission, Permission):
-            violations.append(
-                f"{step.step_id}: permission must be a Permission member, "
-                f"got bare {step.permission!r}"
-            )
-            continue
-        if _is_mutation(step.payload):
-            if step.permission not in (
-                Permission.FINANCE_WRITE,
-                Permission.FINANCE_APPROVE,
-            ):
-                violations.append(
-                    f"{step.step_id}: mutation step requires "
-                    "finance_write or finance_approve permission, "
-                    f"got {step.permission.value!r}"
-                )
-            if not _depends_on_read(step, by_id):
-                violations.append(
-                    f"{step.step_id}: mutation step must depend on a read step"
-                )
-            if not _gated_by_approval(step, by_id):
-                violations.append(
-                    f"{step.step_id}: mutation step must depend on an approval gate"
-                )
-
-        if (
-            isinstance(step.payload, ApprovalGate)
-            and step.permission is not Permission.FINANCE_APPROVE
-        ):
-            violations.append(
-                f"{step.step_id}: approval gate requires "
-                f"finance_approve permission, got {step.permission.value!r}"
-            )
-
-    return violations
+    return validate_step_graph(
+        spec.steps,
+        read_types=_READ_PAYLOAD_TYPES,
+        mutation_types=_MUTATION_PAYLOAD_TYPES,
+        gate_types=(ApprovalGate,),
+        mutation_permissions=(Permission.FINANCE_WRITE, Permission.FINANCE_APPROVE),
+        approve_permission=Permission.FINANCE_APPROVE,
+    )
 
 
 # ---------------------------------------------------------------------------
