@@ -4,7 +4,7 @@
 [![CI](https://github.com/HaikeiLabs/kei-agents/actions/workflows/tests.yaml/badge.svg)](https://github.com/HaikeiLabs/kei-agents/actions/workflows/tests.yaml)
 [![Dependency Review](https://github.com/HaikeiLabs/kei-agents/actions/workflows/security.yaml/badge.svg)](https://github.com/HaikeiLabs/kei-agents/actions/workflows/security.yaml)
 
-Agent definitions, tools, and prompts for the Kei AI assistant platform.
+Agent definitions, tools, and prompts for the Kei AI platform.
 
 ## Architecture
 
@@ -107,19 +107,14 @@ delegated to the tenant-side distributed proxy. See
 ### Harness Agent Definitions
 
 `agents.agent_definitions` declares each harness agent's grant surface as data:
-typed `Permission` members, the subset that needs a human approval, and the
-catalog tools it exposes. `validate_agent_definitions` rejects bare-string
-permissions, unknown tools, tools whose permission is not granted, and any
-`*_approve` permission (approvals are resolved by a human, never the agent).
+typed `Permission` members and the catalog tools it exposes.
+`validate_agent_definitions` rejects bare-string permissions, unknown tools,
+tools whose permission is not granted, and any `*_approve` permission (reserved).
 
-| Agent | Harness | Permissions | Approval required |
-|-------|---------|-------------|-------------------|
-| `pde_search_agent` | `pde` | `drive_read`, `notion_read`, `gmail_read`, `tito_read` | — |
-| `pedro` | `discord` | `github_read`, `github_write`, `crm_read`, `crm_write`, `linear_read`, `linear_write`, `drive_read`, `fundraising_read`, `fundraising_write`, `finance_read`, `finance_write` | `linear_write`, `fundraising_write`, `finance_write` |
-| `dvl_assistant` | `assistant` | `search_wiki`, `web_search`, `project_hours_read`, `semantic_model_read` | — |
-
-`finance_approve` and `fundraising_approve` exist for workflow approval gates
-and are held by human approvers only.
+| Agent | Harness | Permissions |
+|-------|---------|-------------|
+| `pde_search_agent` | `pde` | `drive_read`, `notion_read`, `gmail_read`, `tito_read` |
+| `pedro` | `discord` | `github_read`, `github_write`, `crm_read`, `crm_write`, `linear_read`, `linear_write`, `drive_read`, `fundraising_read`, `fundraising_write`, `finance_read`, `finance_write` |
 
 ### Fundraising Workflow Spec
 
@@ -129,7 +124,7 @@ and any open stage can move to `passed`. There are three canonical workflows:
 `fundraising.investor_outreach`, `fundraising.data_room_share`, and
 `fundraising.investor_decision`. Each one reads from CRM or the Drive data room
 first, then places every data-room share, stage change, Linear follow-up, and
-notification after a `fundraising_approve` gate.
+notification.
 `validate_fundraising_workflow` checks the spec structure; see
 [docs/workflow-validation.md](docs/workflow-validation.md).
 

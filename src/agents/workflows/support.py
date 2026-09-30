@@ -3,10 +3,10 @@
 A typed, composable specification for a support-management workflow that
 reads from Notion, Drive, and custom API (http_api) connectors. This module
 is a **specification only**: it declares the workflow's structure, resource
-mappings, escalation rules, redaction rules, approval gates, and failure
-states. It never contains provider clients, credential resolution, or secret
-material. Provider execution and customer data retrieval happen in the
-tenant-side distributed proxy.
+mappings, escalation rules, redaction rules, and failure states. It never
+contains provider clients, credential resolution, or secret material.
+Provider execution and customer data retrieval happen in the tenant-side
+distributed proxy.
 
 The workflow is harness-neutral: it references connector tool names as
 strings and declares semantic mappings, not execution logic. It has no
@@ -99,21 +99,6 @@ class RedactionRule:
 
 
 @dataclass(frozen=True)
-class ApprovalGate:
-    """Defines the approval requirement for a write step.
-
-    Attributes:
-        step_name: The workflow step this gate protects.
-        approver_role: The role that must approve (e.g. ``support_lead``).
-        description: Human-readable gate description.
-    """
-
-    step_name: str
-    approver_role: str
-    description: str
-
-
-@dataclass(frozen=True)
 class FailureState:
     """Defines failure handling for a workflow step.
 
@@ -145,7 +130,6 @@ class WorkflowStep:
         description: Human-readable step description.
         param_hints: Non-secret parameter names the step accepts (values are
             resolved by the tenant-side proxy, never embedded here).
-        approval_gate: Optional approval gate for write steps.
         failure_state: Optional failure-handling state for this step.
     """
 
@@ -155,7 +139,6 @@ class WorkflowStep:
     connector: str
     description: str
     param_hints: tuple[str, ...] = ()
-    approval_gate: ApprovalGate | None = None
     failure_state: FailureState | None = None
 
 
@@ -171,7 +154,6 @@ class SupportWorkflow:
         resource_mappings: Connector-resource-to-entity mappings.
         escalation_rules: Escalation conditions and actions.
         redaction_rules: PII/sensitive-field redaction rules.
-        approval_gates: Approval requirements for write steps.
         failure_states: Failure-handling definitions.
     """
 
@@ -182,7 +164,6 @@ class SupportWorkflow:
     resource_mappings: tuple[ResourceMapping, ...]
     escalation_rules: tuple[EscalationRule, ...]
     redaction_rules: tuple[RedactionRule, ...]
-    approval_gates: tuple[ApprovalGate, ...]
     failure_states: tuple[FailureState, ...]
 
 
@@ -197,8 +178,8 @@ SUPPORT_WORKFLOW = SupportWorkflow(
         "Harness-neutral support-management workflow that composes semantic "
         "reads from Notion (ticket store), Drive (customer documents), and "
         "custom API (CRM/account records), applies escalation and redaction "
-        "rules, and executes optional approval-gated writes. Provider "
-        "execution is delegated to the tenant-side distributed proxy."
+        "rules, and executes writes. Provider execution is delegated to the "
+        "tenant-side distributed proxy."
     ),
     resource_mappings=(
         ResourceMapping(
@@ -344,23 +325,14 @@ SUPPORT_WORKFLOW = SupportWorkflow(
             connector=_NOTION,
             description=(
                 "Update the ticket status and add a resolution note in the "
-                "governed Notion workspace. This write is gated by an "
-                "approval requirement."
+                "governed Notion workspace."
             ),
             param_hints=("page_id", "properties_json"),
-            approval_gate=ApprovalGate(
-                step_name="update_ticket_status",
-                approver_role="support_lead",
-                description=(
-                    "Ticket status updates require approval from the "
-                    "support lead role before execution."
-                ),
-            ),
             failure_state=FailureState(
                 step_name="update_ticket_status",
                 on_failure=_ABORT,
                 description=(
-                    "Abort the workflow if the approved ticket update "
+                    "Abort the workflow if the ticket update "
                     "fails; a partial write is not acceptable."
                 ),
             ),
@@ -372,18 +344,9 @@ SUPPORT_WORKFLOW = SupportWorkflow(
             connector=_HTTP_API,
             description=(
                 "Create a resolution log record in the governed "
-                "http_api/CRM connection. This write is gated by an "
-                "approval requirement."
+                "http_api/CRM connection."
             ),
             param_hints=("entity", "record_json"),
-            approval_gate=ApprovalGate(
-                step_name="log_resolution",
-                approver_role="support_lead",
-                description=(
-                    "Resolution log entries require approval from the "
-                    "support lead role before execution."
-                ),
-            ),
             failure_state=FailureState(
                 step_name="log_resolution",
                 on_failure=_SKIP,
@@ -460,24 +423,6 @@ SUPPORT_WORKFLOW = SupportWorkflow(
             description=(
                 "Redact credit card fields from customer account records "
                 "before the data is shared outside the tenant boundary."
-            ),
-        ),
-    ),
-    approval_gates=(
-        ApprovalGate(
-            step_name="update_ticket_status",
-            approver_role="support_lead",
-            description=(
-                "Ticket status updates require approval from the "
-                "support lead role before execution."
-            ),
-        ),
-        ApprovalGate(
-            step_name="log_resolution",
-            approver_role="support_lead",
-            description=(
-                "Resolution log entries require approval from the "
-                "support lead role before execution."
             ),
         ),
     ),
@@ -575,7 +520,6 @@ def validate_support_workflow(workflow: SupportWorkflow) -> list[str]:
     - All step kinds are valid (``read`` or ``write``).
     - All tool names are well-formed.
     - All connectors are in the allowed set.
-    - Write steps have approval gates.
     - Failure states reference valid step names.
     - Fallback steps reference valid step names.
     - No parameter hints look like secrets, URLs, or tenant identifiers.
@@ -637,11 +581,6 @@ def validate_support_workflow(workflow: SupportWorkflow) -> list[str]:
                     "never agent-chosen"
                 )
 
-        if step.kind == _WRITE and step.approval_gate is None:
-            violations.append(
-                f"step {step.name!r}: write steps must have an approval gate"
-            )
-
         if step.failure_state is not None:
             fs = step.failure_state
             if fs.step_name != step.name:
@@ -693,16 +632,6 @@ def validate_support_workflow(workflow: SupportWorkflow) -> list[str]:
         if not rm.entity:
             violations.append("resource_mapping: entity is required")
 
-    for gate in workflow.approval_gates:
-        if gate.step_name not in step_names:
-            violations.append(
-                f"approval_gate references unknown step {gate.step_name!r}"
-            )
-        if not gate.approver_role:
-            violations.append(
-                f"approval_gate for {gate.step_name!r}: approver_role is required"
-            )
-
     for rule in workflow.redaction_rules:
         if not rule.field_pattern:
             violations.append("redaction_rule: field_pattern is required")
@@ -722,7 +651,6 @@ def validate_support_workflow(workflow: SupportWorkflow) -> list[str]:
 
 __all__ = [
     "SUPPORT_WORKFLOW",
-    "ApprovalGate",
     "EscalationRule",
     "FailureState",
     "RedactionRule",

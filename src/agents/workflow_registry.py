@@ -2,7 +2,7 @@
 
 A WorkflowManifest declares what a workflow does (name, version, purpose),
 which semantic tools and governed connectors it depends on, its input/output
-contract, scheduling, approval requirements, and audit metadata.  The
+contract, scheduling, and audit metadata.  The
 WorkflowRegistry provides registration and discovery so that workflows can be
 resolved by name, by tool dependency, or by connector dependency without
 coupling to any specific harness (Agentware, Discord, CLI, etc.).
@@ -38,8 +38,6 @@ class WorkflowManifest:
             output shape.
         schedule: Optional cron expression for recurring execution.  ``None``
             means the workflow is invoked on demand only.
-        requires_approval: When ``True`` the workflow needs human approval
-            before executing.
         audit_metadata: Free-form key/value pairs for audit trails
             (e.g. owner, change-ticket, compliance-scope).
     """
@@ -52,7 +50,6 @@ class WorkflowManifest:
     input_schema: dict[str, Any] = field(default_factory=dict)
     output_schema: dict[str, Any] = field(default_factory=dict)
     schedule: str | None = None
-    requires_approval: bool = False
     audit_metadata: dict[str, Any] = field(default_factory=dict)
 
 

@@ -25,7 +25,9 @@ def test_pr18_tools_are_registered_or_quarantined() -> None:
 
 def test_registered_pr18_tools_are_handlerless_and_valid() -> None:
     assert validate_tool_definitions(REGISTERED_LEADS_WORKFLOW_TOOL_DEFINITIONS) == []
-    assert all(tool.handler is None for tool in REGISTERED_LEADS_WORKFLOW_TOOL_DEFINITIONS)
+    assert all(
+        tool.handler is None for tool in REGISTERED_LEADS_WORKFLOW_TOOL_DEFINITIONS
+    )
     assert validate_tool_definitions([LINEAR_CREATE_FOLLOWUP_TOOL]) == []
 
 

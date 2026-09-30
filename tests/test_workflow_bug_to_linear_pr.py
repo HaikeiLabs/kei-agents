@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from agents.workflows.bug_to_linear_pr import (
     BUG_TO_LINEAR_PR,
-    ApprovalDecision,
     BugReport,
     ConnectorRef,
     LinearTicketRef,
@@ -111,41 +110,6 @@ class TestLinearTicketStep:
         assert "linear.get_issue" in names
 
 
-class TestApprovalGateStep:
-    def test_approval_decision_approved(self) -> None:
-        decision = ApprovalDecision(
-            approved=True,
-            reviewer="pete@example.com",
-            reason="LGTM, tested locally",
-        )
-        assert decision.approved is True
-        assert decision.reviewer == "pete@example.com"
-
-    def test_approval_decision_rejected(self) -> None:
-        decision = ApprovalDecision(approved=False, reason="Needs more testing")
-        assert decision.approved is False
-        assert decision.reviewer is None
-
-    def test_approval_gate_step_present(self) -> None:
-        step = get_step(BUG_TO_LINEAR_PR, "approval_gate")
-        assert step is not None
-        assert step.input_type == LinearTicketRef
-        assert step.output_type == ApprovalDecision
-
-    def test_approval_gate_transitions(self) -> None:
-        step = get_step(BUG_TO_LINEAR_PR, "approval_gate")
-        assert step is not None
-        assert "github_pr" in step.next_steps
-        assert None in step.next_steps  # rejection is terminal
-
-    def test_approval_gate_no_permissions(self) -> None:
-        """Approval itself is a harness-level side effect, not a tool call."""
-        step = get_step(BUG_TO_LINEAR_PR, "approval_gate")
-        assert step is not None
-        assert step.required_permissions == []
-        assert step.connector_dependencies == []
-
-
 class TestGitHubPRStep:
     def test_pr_spec_default_base(self) -> None:
         spec = PRSpec(
@@ -223,10 +187,9 @@ class TestWorkflowSpecStructure:
 
     def test_spec_has_all_steps(self) -> None:
         names = {s.name for s in BUG_TO_LINEAR_PR.steps}
-        assert names == {"bug_intake", "linear_ticket", "approval_gate", "github_pr"}
+        assert names == {"bug_intake", "linear_ticket", "github_pr"}
 
     def test_spec_tags(self) -> None:
-        assert "approval-required" in BUG_TO_LINEAR_PR.tags
         assert "bug" in BUG_TO_LINEAR_PR.tags
 
     def test_spec_no_duplicate_step_names(self) -> None:
@@ -236,8 +199,7 @@ class TestWorkflowSpecStructure:
     def test_spec_ordered_steps(self) -> None:
         assert BUG_TO_LINEAR_PR.steps[0].name == "bug_intake"
         assert BUG_TO_LINEAR_PR.steps[1].name == "linear_ticket"
-        assert BUG_TO_LINEAR_PR.steps[2].name == "approval_gate"
-        assert BUG_TO_LINEAR_PR.steps[3].name == "github_pr"
+        assert BUG_TO_LINEAR_PR.steps[2].name == "github_pr"
 
 
 class TestConnectorRefSemantics:

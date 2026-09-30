@@ -61,7 +61,9 @@ class TestGmailReadSchemas:
             t for t in GMAIL_READ_TOOL_DEFINITIONS if t.name == "gmail.search_messages"
         )
         assert _param_names(search) == {"query", "page_size", "page_token"}
-        get = next(t for t in GMAIL_READ_TOOL_DEFINITIONS if t.name == "gmail.get_message")
+        get = next(
+            t for t in GMAIL_READ_TOOL_DEFINITIONS if t.name == "gmail.get_message"
+        )
         assert _param_names(get) == {"message_id"}
 
 
