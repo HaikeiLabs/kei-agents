@@ -1,0 +1,211 @@
+# DVL Assistant tool catalog (v1).
+#
+# Read-only RPC surface exposed to the DVL assistant (Kei policy + Python tool
+# pack). Tool names are the contract: utilities.<utility>.<snake_rpc>.
+# Validated against the .proto contracts by agent/tests/test_assistant_tools.py.
+# See agent/assistant-tools.md for the naming rule and how to add a tool.
+#
+# Pilots served: A-1 bonus cycle status/blockers, A-2 OMS daily attention
+# digest, A-3 payroll export pre-flight, A-9 post-deploy health.
+#
+# Vendored from DVL-Group/utilities agent/assistant-tools.v1.yaml (staging).
+# Refresh: gh api repos/DVL-Group/utilities/contents/agent/assistant-tools.v1.yaml?ref=staging --jq '.content' | base64 -d > tests/fixtures/assistant-tools.v1.yaml
+version: 1
+tools:
+  # ----- A-1: bonus cycle status and blockers -----
+  - name: utilities.admin_bonus.get_active_workflow
+    service: admin_bonus.v1.AdminBonusService
+    rpc: GetActiveWorkflow
+    access: read
+    automations: [A-1]
+    summary: The active admin-bonus workflow for the current cycle.
+    arguments: []
+  - name: utilities.admin_bonus.get_workflow_status
+    service: admin_bonus.v1.AdminBonusService
+    rpc: GetWorkflowStatus
+    access: read
+    automations: [A-1]
+    summary: Workflow status (steps, milestones, blockers) for an admin-bonus period.
+    arguments:
+      - field: period_id
+        type: int32
+        description: The bonus period to inspect.
+  - name: utilities.admin_bonus.list_approval_blockers
+    service: admin_bonus.v1.AdminBonusService
+    rpc: ListApprovalBlockers
+    access: read
+    automations: [A-1]
+    summary: Approval blockers standing between a bonus period and sign-off.
+    arguments:
+      - field: period_id
+        type: int32
+        description: The bonus period to inspect.
+  - name: utilities.tech_bonus.get_workflow_status
+    service: tech_bonus.v1.TechBonusService
+    rpc: GetWorkflowStatus
+    access: read
+    automations: [A-1]
+    summary: Workflow status for a tech-bonus pay period.
+    arguments:
+      - field: pay_period_id
+        type: int32
+        description: The tech-bonus pay period to inspect.
+  - name: utilities.tech_bonus.list_sales_manager_approvals
+    service: tech_bonus.v1.TechBonusService
+    rpc: ListSalesManagerApprovals
+    access: read
+    automations: [A-1]
+    summary: Sales-manager bonus approvals in the cycle.
+    arguments:
+      - field: page
+        type: platform.v1.PageRequest
+        description: Pagination cursor and limit.
+  # ----- A-2: OMS daily attention digest -----
+  - name: utilities.oms.list_orders
+    service: oms.v1.OmsService
+    rpc: ListOrders
+    access: read
+    automations: [A-2]
+    summary: Orders filtered by lane, stage, owner, flags, or search text.
+    arguments:
+      - field: lane
+        type: Lane
+        description: Filter by order lane.
+      - field: stage
+        type: Stage
+        description: Filter by order stage.
+      - field: mine
+        type: bool
+        description: Only orders owned by the caller.
+      - field: flags_only
+        type: bool
+        description: Only flagged orders.
+      - field: search
+        type: string
+        description: Free-text search over orders.
+      - field: page
+        type: platform.v1.PageRequest
+        description: Pagination cursor and limit.
+      - field: owner
+        type: string
+        description: Filter by order owner.
+      - field: include_returns
+        type: bool
+        description: Include return lines.
+      - field: workflow
+        type: string
+        description: Filter by workflow.
+  - name: utilities.oms.get_quality_tally
+    service: oms.v1.OmsService
+    rpc: GetQualityTally
+    access: read
+    automations: [A-2]
+    summary: Order-quality tally for the attention digest.
+    arguments: []
+  - name: utilities.oms.list_triage
+    service: oms.v1.OmsService
+    rpc: ListTriage
+    access: read
+    automations: [A-2]
+    summary: Unmatched extract rows parked in triage.
+    arguments:
+      - field: page
+        type: platform.v1.PageRequest
+        description: Pagination cursor and limit.
+  - name: utilities.oms.list_orders_ar
+    service: oms.v1.OmsService
+    rpc: ListOrdersAr
+    access: read
+    automations: [A-2]
+    summary: Orders with accounts-receivable state, filterable by exit state.
+    arguments:
+      - field: search
+        type: string
+        description: Free-text search over orders.
+      - field: page
+        type: platform.v1.PageRequest
+        description: Pagination cursor and limit.
+      - field: exit_state
+        type: OrderArExitState
+        description: Filter by AR exit state.
+  - name: utilities.oms.list_ar_ledger
+    service: oms.v1.OmsService
+    rpc: ListArLedger
+    access: read
+    automations: [A-2]
+    summary: AR ledger lines for the attention digest.
+    arguments:
+      - field: include_opening_balance
+        type: bool
+        description: Include the opening balance row.
+      - field: search
+        type: string
+        description: Free-text search over ledger lines.
+      - field: page
+        type: platform.v1.PageRequest
+        description: Pagination cursor and limit.
+  # ----- A-3: payroll export pre-flight -----
+  - name: utilities.admin_bonus.get_salary_audit
+    service: admin_bonus.v1.AdminBonusService
+    rpc: GetSalaryAudit
+    access: read
+    automations: [A-3]
+    summary: Salary audit rows for a bonus period (pre-flight check).
+    arguments:
+      - field: period_id
+        type: int32
+        description: The bonus period to inspect.
+      - field: page
+        type: platform.v1.PageRequest
+        description: Pagination cursor and limit.
+  - name: utilities.admin_bonus.list_exclusions
+    service: admin_bonus.v1.AdminBonusService
+    rpc: ListExclusions
+    access: read
+    automations: [A-3]
+    summary: Bonus exclusions in force for the period.
+    arguments:
+      - field: page
+        type: platform.v1.PageRequest
+        description: Pagination cursor and limit.
+  - name: utilities.admin_bonus.list_manager_submissions
+    service: admin_bonus.v1.AdminBonusService
+    rpc: ListManagerSubmissions
+    access: read
+    automations: [A-3]
+    summary: Manager bonus submissions and their approval state.
+    arguments:
+      - field: period_id
+        type: int32
+        description: The bonus period to inspect.
+      - field: page
+        type: platform.v1.PageRequest
+        description: Pagination cursor and limit.
+  - name: utilities.admin_bonus.list_one_off_bonus_totals
+    service: admin_bonus.v1.AdminBonusService
+    rpc: ListOneOffBonusTotals
+    access: read
+    automations: [A-3]
+    summary: One-off bonus totals for the period (pre-flight check).
+    arguments:
+      - field: period_id
+        type: int32
+        description: The bonus period to inspect.
+      - field: page
+        type: platform.v1.PageRequest
+        description: Pagination cursor and limit.
+  # ----- A-9: post-deploy health -----
+  - name: utilities.project_health.list_my_projects
+    service: project_health.v1.ProjectHealthService
+    rpc: ListMyProjects
+    access: read
+    automations: [A-9]
+    summary: The caller's project health cards (proves the utility serves data).
+    arguments: []
+  - name: utilities.project_health.get_my_commission_summary
+    service: project_health.v1.ProjectHealthService
+    rpc: GetMyCommissionSummary
+    access: read
+    automations: [A-9]
+    summary: The caller's roll-up commission summary card.
+    arguments: []
