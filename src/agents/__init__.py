@@ -1,4 +1,4 @@
-"""Kei Agents - Agent definitions, tools, and prompts for Kei AI assistant platform.
+"""Kei Agents - Agent definitions, tools, and prompts for the Kei AI platform.
 
 This package provides:
 - Tool definitions with multi-model format support (OpenAI, Anthropic, Ollama)
@@ -7,7 +7,7 @@ This package provides:
 - CRM tools for lead management (mock adapter)
 - GitHub tools for issue/PR management (with governance)
 - Permission-based access control
-- Harness agent definitions (PDE search agent, Pedro, DVL Assistant)
+ - Harness agent definitions (PDE search agent, Pedro)
 - Harness-neutral workflow registry for discovering workflows by tool or
   connector dependency
 - Harness-neutral composable workflow definitions
@@ -24,8 +24,6 @@ Usage:
 """
 
 from agents.agent_definitions import (
-    ASSISTANT_LANE_PERMISSIONS,
-    DVL_ASSISTANT_AGENT,
     HARNESS_AGENT_DEFINITIONS,
     PDE_SEARCH_AGENT,
     PEDRO_AGENT,
@@ -114,10 +112,8 @@ from agents.workflows import (
 
 __all__ = [
     "ALL_TOOL_DEFINITIONS",
-    "ASSISTANT_LANE_PERMISSIONS",
     "CONNECTOR_READ_TOOL_DEFINITIONS",
     "DRIVE_READ_TOOL_DEFINITIONS",
-    "DVL_ASSISTANT_AGENT",
     "GITHUB_READ_TOOL_DEFINITIONS",
     "GMAIL_READ_TOOL_DEFINITIONS",
     "HARNESS_AGENT_DEFINITIONS",

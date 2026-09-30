@@ -8,12 +8,10 @@ import itertools
 import pytest
 
 from agents import Permission
-from agents.workflows import step_graph
 from agents.workflows.fundraising import (
     FUNDRAISING_WORKFLOW_SPECS,
     INVESTOR_STAGE_TRANSITIONS,
     TERMINAL_INVESTOR_STAGES,
-    ApprovalGate,
     DataRoomRead,
     DataRoomShare,
     FundraisingWorkflowSpec,
@@ -53,9 +51,7 @@ class TestInvestorStateMachine:
         for a, b in itertools.pairwise(path):
             assert is_valid_stage_transition(a, b)
 
-    @pytest.mark.parametrize(
-        "stage", [S.PROSPECT, S.CONTACTED, S.MEETING, S.DILIGENCE]
-    )
+    @pytest.mark.parametrize("stage", [S.PROSPECT, S.CONTACTED, S.MEETING, S.DILIGENCE])
     def test_any_open_stage_can_pass(self, stage: InvestorStage) -> None:
         assert is_valid_stage_transition(stage, S.PASSED)
 
@@ -106,19 +102,6 @@ class TestCanonicalSpecs:
             assert step.permission.value.startswith("fundraising_")
 
     @pytest.mark.parametrize("spec", SPECS, ids=SPEC_IDS)
-    def test_every_egress_and_mutation_has_an_approval_ancestor(
-        self, spec: FundraisingWorkflowSpec
-    ) -> None:
-        # The validator does not require gated egress (ABAC decides), but the
-        # canonical fundraising specs gate every data-room share, Linear task,
-        # and notification by construction.
-        by_id = {s.step_id: s for s in spec.steps}
-        gated_kinds = (DataRoomShare, InvestorStageUpdate, LinearTask, Notify)
-        for step in spec.steps:
-            if isinstance(step.payload, gated_kinds):
-                assert step_graph.has_ancestor(step, by_id, (ApprovalGate,)), step.step_id
-
-    @pytest.mark.parametrize("spec", SPECS, ids=SPEC_IDS)
     def test_egress_permission_is_write(self, spec: FundraisingWorkflowSpec) -> None:
         egress = fundraising_egress_steps(spec)
         assert egress, "every canonical spec has a follow-up or notification"
@@ -126,29 +109,37 @@ class TestCanonicalSpecs:
             assert isinstance(step.payload, (LinearTask, Notify))
             assert step.permission is Permission.FUNDRAISING_WRITE
 
-    @pytest.mark.parametrize("spec", SPECS, ids=SPEC_IDS)
-    def test_gates_use_fundraising_approver(self, spec: FundraisingWorkflowSpec) -> None:
-        gates = [s for s in spec.steps if isinstance(s.payload, ApprovalGate)]
-        assert gates
-        for gate in gates:
-            assert isinstance(gate.payload, ApprovalGate)
-            assert gate.payload.required_role == "fundraising_approver"
-            assert gate.permission is Permission.FUNDRAISING_APPROVE
-
     def test_outreach_shape(self) -> None:
         spec = investor_outreach_workflow()
         kinds = {type(s.payload) for s in spec.steps}
-        assert {InvestorLookup, ApprovalGate, LinearTask, Notify, InvestorStageUpdate} <= kinds
-        update = next(s.payload for s in spec.steps if isinstance(s.payload, InvestorStageUpdate))
+        assert {
+            InvestorLookup,
+            LinearTask,
+            Notify,
+            InvestorStageUpdate,
+        } <= kinds
+        update = next(
+            s.payload for s in spec.steps if isinstance(s.payload, InvestorStageUpdate)
+        )
         assert (update.from_stage, update.to_stage) == (S.PROSPECT, S.CONTACTED)
 
     def test_data_room_share_shape(self) -> None:
         spec = data_room_share_workflow()
         kinds = {type(s.payload) for s in spec.steps}
-        assert {InvestorLookup, DataRoomRead, ApprovalGate, DataRoomShare, LinearTask, Notify} <= kinds
-        share = next(s.payload for s in spec.steps if isinstance(s.payload, DataRoomShare))
+        assert {
+            InvestorLookup,
+            DataRoomRead,
+            DataRoomShare,
+            LinearTask,
+            Notify,
+        } <= kinds
+        share = next(
+            s.payload for s in spec.steps if isinstance(s.payload, DataRoomShare)
+        )
         assert share.access == "view"
-        update = next(s.payload for s in spec.steps if isinstance(s.payload, InvestorStageUpdate))
+        update = next(
+            s.payload for s in spec.steps if isinstance(s.payload, InvestorStageUpdate)
+        )
         assert (update.from_stage, update.to_stage) == (S.MEETING, S.DILIGENCE)
 
     @pytest.mark.parametrize("outcome", [S.COMMITTED, S.PASSED])
@@ -156,7 +147,9 @@ class TestCanonicalSpecs:
         spec = investor_decision_workflow(outcome)
         assert validate_fundraising_workflow(spec) == []
         assert any(isinstance(s.payload, InvestorPipelineRead) for s in spec.steps)
-        update = next(s.payload for s in spec.steps if isinstance(s.payload, InvestorStageUpdate))
+        update = next(
+            s.payload for s in spec.steps if isinstance(s.payload, InvestorStageUpdate)
+        )
         assert (update.from_stage, update.to_stage) == (S.DILIGENCE, outcome)
 
     def test_decision_rejects_non_terminal_outcome(self) -> None:
@@ -164,14 +157,27 @@ class TestCanonicalSpecs:
             investor_decision_workflow(S.MEETING)
 
     def test_specs_carry_no_org_or_workspace_or_credentials(self) -> None:
-        forbidden = ("org_id", "workspace", "tenant", "token", "secret", "credential", "url")
+        forbidden = (
+            "org_id",
+            "workspace",
+            "tenant",
+            "token",
+            "secret",
+            "credential",
+            "url",
+        )
         for spec in SPECS:
             for step in spec.steps:
                 for f in dataclasses.fields(step.payload):
-                    assert not any(h in f.name for h in forbidden), (step.step_id, f.name)
+                    assert not any(h in f.name for h in forbidden), (
+                        step.step_id,
+                        f.name,
+                    )
 
 
-def _without_step(spec: FundraisingWorkflowSpec, step_id: str) -> FundraisingWorkflowSpec:
+def _without_step(
+    spec: FundraisingWorkflowSpec, step_id: str
+) -> FundraisingWorkflowSpec:
     """Remove a step and rewire its dependents to its own dependencies."""
     removed = next(s for s in spec.steps if s.step_id == step_id)
     steps = []
@@ -187,42 +193,19 @@ def _without_step(spec: FundraisingWorkflowSpec, step_id: str) -> FundraisingWor
     return dataclasses.replace(spec, steps=steps)
 
 
-def _gate_ids(spec: FundraisingWorkflowSpec) -> list[str]:
-    return [s.step_id for s in spec.steps if isinstance(s.payload, ApprovalGate)]
-
-
 class TestMutatedVariantsRejected:
     @pytest.mark.parametrize("spec", SPECS, ids=SPEC_IDS)
-    def test_removing_all_gates_is_rejected(self, spec: FundraisingWorkflowSpec) -> None:
-        mutated = spec
-        for gate_id in _gate_ids(spec):
-            mutated = _without_step(mutated, gate_id)
-        violations = validate_fundraising_workflow(mutated)
-        assert any("must depend on an approval gate" in v for v in violations)
-
-    @pytest.mark.parametrize("spec", SPECS, ids=SPEC_IDS)
-    def test_removing_any_single_gate_is_rejected(self, spec: FundraisingWorkflowSpec) -> None:
-        for gate_id in _gate_ids(spec):
-            violations = validate_fundraising_workflow(_without_step(spec, gate_id))
-            assert any("must depend on an approval gate" in v for v in violations), gate_id
-
-    @pytest.mark.parametrize("spec", SPECS, ids=SPEC_IDS)
-    def test_retyping_a_gate_permission_is_rejected(self, spec: FundraisingWorkflowSpec) -> None:
-        gate_id = _gate_ids(spec)[0]
-        steps = [
-            dataclasses.replace(s, permission=Permission.FUNDRAISING_WRITE)
-            if s.step_id == gate_id
-            else s
-            for s in spec.steps
-        ]
-        violations = validate_fundraising_workflow(dataclasses.replace(spec, steps=steps))
-        assert any("approval gate requires fundraising_approve" in v for v in violations)
-
-    @pytest.mark.parametrize("spec", SPECS, ids=SPEC_IDS)
-    def test_bare_string_permission_is_rejected(self, spec: FundraisingWorkflowSpec) -> None:
+    def test_bare_string_permission_is_rejected(
+        self, spec: FundraisingWorkflowSpec
+    ) -> None:
         first = spec.steps[0]
-        steps = [dataclasses.replace(first, permission="fundraising_read"), *spec.steps[1:]]
-        violations = validate_fundraising_workflow(dataclasses.replace(spec, steps=steps))
+        steps = [
+            dataclasses.replace(first, permission="fundraising_read"),
+            *spec.steps[1:],
+        ]
+        violations = validate_fundraising_workflow(
+            dataclasses.replace(spec, steps=steps)
+        )
         assert any("must be a Permission member" in v for v in violations)
 
     @pytest.mark.parametrize("spec", SPECS, ids=SPEC_IDS)
@@ -232,7 +215,9 @@ class TestMutatedVariantsRejected:
             dataclasses.replace(first, depends_on=[*first.depends_on, last.step_id]),
             *spec.steps[1:],
         ]
-        violations = validate_fundraising_workflow(dataclasses.replace(spec, steps=steps))
+        violations = validate_fundraising_workflow(
+            dataclasses.replace(spec, steps=steps)
+        )
         assert any(v.startswith("dependency cycle:") for v in violations)
 
     def test_share_with_finance_permission_is_rejected(self) -> None:
@@ -243,7 +228,9 @@ class TestMutatedVariantsRejected:
             else s
             for s in spec.steps
         ]
-        violations = validate_fundraising_workflow(dataclasses.replace(spec, steps=steps))
+        violations = validate_fundraising_workflow(
+            dataclasses.replace(spec, steps=steps)
+        )
         assert any("mutation step requires fundraising_write" in v for v in violations)
 
     def test_invalid_stage_transition_is_rejected(self) -> None:
@@ -259,8 +246,12 @@ class TestMutatedVariantsRejected:
             else s
             for s in spec.steps
         ]
-        violations = validate_fundraising_workflow(dataclasses.replace(spec, steps=steps))
-        assert any("invalid stage transition prospect -> committed" in v for v in violations)
+        violations = validate_fundraising_workflow(
+            dataclasses.replace(spec, steps=steps)
+        )
+        assert any(
+            "invalid stage transition prospect -> committed" in v for v in violations
+        )
 
 
 class TestStepConstruction:

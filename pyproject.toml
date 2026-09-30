@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "kei-agents"
 version = "0.1.0"
-description = "Agent definitions, tools, and prompts for Kei AI assistant platform"
+description = "Agent definitions, tools, and prompts for the Kei AI platform"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [

@@ -8,13 +8,9 @@ operations, and move an investor through the pipeline::
          \\          \\          \\          \\
           +----------+----------+----------+-> passed
 
-Every canonical workflow is read-first, and every data-room share, stage
-change, Linear follow-up, and notification sits downstream of an explicit
-fundraising approval gate. The validator enforces the structural rules
-(docs/workflow-validation.md). Whether a given egress needs approval in a
-given tenant is decided at invocation time by ABAC and the tenant-side proxy
-PEP, so the canonical specs gate egress by construction, not because the
-validator requires it.
+Every canonical workflow is read-first. The validator enforces the
+structural rules (docs/workflow-validation.md).  Authorization is decided at
+invocation time by ABAC and the tenant-side proxy PEP.
 
 This is a harness-neutral data specification. Each step defines domain
 intent only; the consuming harness resolves connector bindings, enforces
@@ -29,7 +25,7 @@ from enum import Enum
 from typing import Literal
 
 from agents.tool_definitions import Permission
-from agents.workflows.finance import ApprovalGate, LinearTask, Notify
+from agents.workflows.finance import LinearTask, Notify
 from agents.workflows.step_graph import validate_step_graph
 
 
@@ -48,9 +44,7 @@ INVESTOR_STAGE_TRANSITIONS: dict[InvestorStage, frozenset[InvestorStage]] = {
     InvestorStage.PROSPECT: frozenset({InvestorStage.CONTACTED, InvestorStage.PASSED}),
     InvestorStage.CONTACTED: frozenset({InvestorStage.MEETING, InvestorStage.PASSED}),
     InvestorStage.MEETING: frozenset({InvestorStage.DILIGENCE, InvestorStage.PASSED}),
-    InvestorStage.DILIGENCE: frozenset(
-        {InvestorStage.COMMITTED, InvestorStage.PASSED}
-    ),
+    InvestorStage.DILIGENCE: frozenset({InvestorStage.COMMITTED, InvestorStage.PASSED}),
     InvestorStage.COMMITTED: frozenset(),
     InvestorStage.PASSED: frozenset(),
 }
@@ -60,14 +54,16 @@ TERMINAL_INVESTOR_STAGES: frozenset[InvestorStage] = frozenset(
 )
 
 
-def is_valid_stage_transition(from_stage: InvestorStage, to_stage: InvestorStage) -> bool:
+def is_valid_stage_transition(
+    from_stage: InvestorStage, to_stage: InvestorStage
+) -> bool:
     """Report whether an investor may move from *from_stage* to *to_stage*."""
     return to_stage in INVESTOR_STAGE_TRANSITIONS.get(from_stage, frozenset())
 
 
 # ---------------------------------------------------------------------------
 # Step payloads - each dataclass captures the domain intent of one step.
-# LinearTask, Notify, and ApprovalGate are shared with the finance spec.
+# LinearTask and Notify are shared with the finance spec.
 # ---------------------------------------------------------------------------
 
 
@@ -123,7 +119,6 @@ FundraisingStepPayload = (
     | DataRoomShare
     | InvestorStageUpdate
     | LinearTask
-    | ApprovalGate
     | Notify
 )
 
@@ -176,10 +171,10 @@ def validate_fundraising_workflow(spec: FundraisingWorkflowSpec) -> list[str]:
     """Validate a fundraising workflow's structure.
 
     Applies the shared step-graph rules (unique ids, resolvable dependencies,
-    no cycles, typed permissions, every mutation has a read and an approval
-    gate among its ancestors, mutations hold ``fundraising_write``, gates hold
-    ``fundraising_approve``) and checks every stage update is a valid
-    pipeline transition. A spec that passes is well formed, not permitted.
+    no cycles, typed permissions, every mutation has a read among its
+    ancestors, mutations hold ``fundraising_write``) and checks every stage
+    update is a valid pipeline transition. A spec that passes is well formed,
+    not permitted.
 
     Returns a list of violations; an empty list means the spec is valid.
     """
@@ -187,9 +182,7 @@ def validate_fundraising_workflow(spec: FundraisingWorkflowSpec) -> list[str]:
         spec.steps,
         read_types=_READ_PAYLOAD_TYPES,
         mutation_types=_MUTATION_PAYLOAD_TYPES,
-        gate_types=(ApprovalGate,),
         mutation_permissions=(Permission.FUNDRAISING_WRITE,),
-        approve_permission=Permission.FUNDRAISING_APPROVE,
     )
     for step in spec.steps:
         payload = step.payload
@@ -207,8 +200,6 @@ def validate_fundraising_workflow(spec: FundraisingWorkflowSpec) -> list[str]:
 # Pre-built workflow specs
 # ---------------------------------------------------------------------------
 
-_APPROVER = "fundraising_approver"
-
 
 def _lookup_investor(depends_on: list[str] | None = None) -> FundraisingWorkflowStep:
     return FundraisingWorkflowStep(
@@ -216,16 +207,6 @@ def _lookup_investor(depends_on: list[str] | None = None) -> FundraisingWorkflow
         description="Look up the investor record in the governed CRM",
         payload=InvestorLookup(lookup_by="id", lookup_value=""),
         depends_on=depends_on or [],
-    )
-
-
-def _approval(step_id: str, reason: str, depends_on: list[str]) -> FundraisingWorkflowStep:
-    return FundraisingWorkflowStep(
-        step_id=step_id,
-        description=reason,
-        payload=ApprovalGate(required_role=_APPROVER, reason=reason),
-        permission=Permission.FUNDRAISING_APPROVE,
-        depends_on=depends_on,
     )
 
 
@@ -256,31 +237,25 @@ def _stage_update(
 def investor_outreach_workflow() -> FundraisingWorkflowSpec:
     """First outreach to a prospect: prospect -> contacted.
 
-      1. Look up the investor in CRM
-      2. Approval gate
-      3. Create a Linear follow-up task (egress)
-      4. Notify the investor (egress)
-      5. Advance the stage (mutation)
+    1. Look up the investor in CRM
+    2. Create a Linear follow-up task (egress)
+    3. Notify the investor (egress)
+    4. Advance the stage (mutation)
     """
     return FundraisingWorkflowSpec(
         workflow_id="fundraising.investor_outreach",
         name="Investor Outreach",
-        description="Approve and record first outreach to a prospective investor",
-        tags=["fundraising", "investor", "outreach", "approval"],
+        description="Record first outreach to a prospective investor",
+        tags=["fundraising", "investor", "outreach"],
         steps=[
             _lookup_investor(),
-            _approval(
-                "approve_outreach",
-                "Outreach to an investor requires fundraising approval",
-                ["lookup_investor"],
-            ),
-            _followup("Follow up with investor", ["approve_outreach"]),
+            _followup("Follow up with investor", ["lookup_investor"]),
             FundraisingWorkflowStep(
                 step_id="notify_investor",
-                description="Send the approved outreach message to the investor",
+                description="Send the outreach message to the investor",
                 payload=Notify(channel="email", recipient="", message=""),
                 permission=Permission.FUNDRAISING_WRITE,
-                depends_on=["approve_outreach"],
+                depends_on=["lookup_investor"],
             ),
             _stage_update(
                 InvestorStage.PROSPECT, InvestorStage.CONTACTED, ["notify_investor"]
@@ -292,19 +267,18 @@ def investor_outreach_workflow() -> FundraisingWorkflowSpec:
 def data_room_share_workflow() -> FundraisingWorkflowSpec:
     """Open the data room to an investor: meeting -> diligence.
 
-      1. Look up the investor in CRM
-      2. Read the data room in Drive
-      3. Approval gate
-      4. Share the data room, view-only and time-limited (mutation)
-      5. Advance the stage (mutation)
-      6. Create a Linear follow-up task (egress)
-      7. Notify the investor (egress)
+    1. Look up the investor in CRM
+    2. Read the data room in Drive
+    3. Share the data room, view-only and time-limited (mutation)
+    4. Advance the stage (mutation)
+    5. Create a Linear follow-up task (egress)
+    6. Notify the investor (egress)
     """
     return FundraisingWorkflowSpec(
         workflow_id="fundraising.data_room_share",
         name="Data Room Share",
-        description="Approve and grant an investor view-only data-room access",
-        tags=["fundraising", "investor", "data_room", "approval"],
+        description="Grant an investor view-only data-room access",
+        tags=["fundraising", "investor", "data_room"],
         steps=[
             _lookup_investor(),
             FundraisingWorkflowStep(
@@ -313,17 +287,12 @@ def data_room_share_workflow() -> FundraisingWorkflowSpec:
                 payload=DataRoomRead(),
                 depends_on=["lookup_investor"],
             ),
-            _approval(
-                "approve_share",
-                "Sharing the data room requires fundraising approval",
-                ["read_data_room"],
-            ),
             FundraisingWorkflowStep(
                 step_id="share_data_room",
                 description="Grant the investor view-only, time-limited access",
                 payload=DataRoomShare(investor_id=""),
                 permission=Permission.FUNDRAISING_WRITE,
-                depends_on=["approve_share"],
+                depends_on=["read_data_room"],
             ),
             _stage_update(
                 InvestorStage.MEETING, InvestorStage.DILIGENCE, ["share_data_room"]
@@ -345,12 +314,11 @@ def investor_decision_workflow(
 ) -> FundraisingWorkflowSpec:
     """Record an investor's decision: diligence -> committed or passed.
 
-      1. Read the diligence pipeline in CRM
-      2. Look up the investor in CRM
-      3. Approval gate
-      4. Record the decision stage (mutation)
-      5. Create a Linear follow-up task (egress)
-      6. Notify the team (egress)
+    1. Read the diligence pipeline in CRM
+    2. Look up the investor in CRM
+    3. Record the decision stage (mutation)
+    4. Create a Linear follow-up task (egress)
+    5. Notify the team (egress)
     """
     if outcome not in TERMINAL_INVESTOR_STAGES:
         raise ValueError(
@@ -361,8 +329,8 @@ def investor_decision_workflow(
     return FundraisingWorkflowSpec(
         workflow_id="fundraising.investor_decision",
         name="Investor Decision",
-        description="Approve and record an investor's commit or pass decision",
-        tags=["fundraising", "investor", "decision", "approval"],
+        description="Record an investor's commit or pass decision",
+        tags=["fundraising", "investor", "decision"],
         steps=[
             FundraisingWorkflowStep(
                 step_id="read_pipeline",
@@ -370,12 +338,7 @@ def investor_decision_workflow(
                 payload=InvestorPipelineRead(stage=InvestorStage.DILIGENCE),
             ),
             _lookup_investor(["read_pipeline"]),
-            _approval(
-                "approve_decision",
-                "Recording an investor decision requires fundraising approval",
-                ["lookup_investor"],
-            ),
-            _stage_update(InvestorStage.DILIGENCE, outcome, ["approve_decision"]),
+            _stage_update(InvestorStage.DILIGENCE, outcome, ["lookup_investor"]),
             _followup("Close out investor decision", ["advance_stage"]),
             FundraisingWorkflowStep(
                 step_id="notify_team",
@@ -398,7 +361,6 @@ __all__ = [
     "FUNDRAISING_WORKFLOW_SPECS",
     "INVESTOR_STAGE_TRANSITIONS",
     "TERMINAL_INVESTOR_STAGES",
-    "ApprovalGate",
     "DataRoomRead",
     "DataRoomShare",
     "FundraisingStepPayload",

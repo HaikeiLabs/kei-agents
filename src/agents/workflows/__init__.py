@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from agents.workflows.finance import (
     FINANCE_WORKFLOW_SPECS,
-    ApprovalGate,
     CRMLookup,
     CRMUpdate,
     DriveArchive,
@@ -100,6 +99,7 @@ def __getattr__(name: str) -> object:
         return value
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
+
 __all__ = [
     "CRM_LINEAR_FOLLOWUP_TOOL_DEFINITIONS",
     "FINANCE_WORKFLOW_SPECS",
@@ -110,7 +110,6 @@ __all__ = [
     "QUARANTINED_LEADS_WORKFLOW_TOOL_DEFINITIONS",
     "REGISTERED_LEADS_WORKFLOW_TOOL_DEFINITIONS",
     "WORKFLOW_DEFINITIONS",
-    "ApprovalGate",
     "ApprovalInfo",
     "ApprovalStatus",
     "CRMLookup",

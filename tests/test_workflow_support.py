@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from agents.workflows.support import (
     SUPPORT_WORKFLOW,
-    ApprovalGate,
     EscalationRule,
     FailureState,
     RedactionRule,
@@ -49,9 +48,6 @@ class TestWorkflowSpecShape:
     def test_has_redaction_rules(self):
         assert len(SUPPORT_WORKFLOW.redaction_rules) > 0
 
-    def test_has_approval_gates(self):
-        assert len(SUPPORT_WORKFLOW.approval_gates) > 0
-
     def test_has_failure_states(self):
         assert len(SUPPORT_WORKFLOW.failure_states) > 0
 
@@ -60,10 +56,6 @@ class TestReadSteps:
     def test_read_steps_use_read_kind(self):
         for step in _read_steps():
             assert step.kind == "read"
-
-    def test_read_steps_have_no_approval_gate(self):
-        for step in _read_steps():
-            assert step.approval_gate is None
 
     def test_read_steps_compose_expected_connectors(self):
         connectors = {step.connector for step in _read_steps()}
@@ -88,13 +80,6 @@ class TestWriteSteps:
     def test_write_steps_use_write_kind(self):
         for step in _write_steps():
             assert step.kind == "write"
-
-    def test_write_steps_have_approval_gates(self):
-        for step in _write_steps():
-            assert step.approval_gate is not None, (
-                f"write step {step.name!r} must have an approval gate"
-            )
-            assert step.approval_gate.approver_role
 
     def test_write_steps_have_failure_states(self):
         for step in _write_steps():
@@ -199,22 +184,6 @@ class TestRedactionRules:
     def test_ssn_redaction_exists(self):
         patterns = [r.field_pattern for r in SUPPORT_WORKFLOW.redaction_rules]
         assert any("ssn" in p.lower() for p in patterns)
-
-
-class TestApprovalGates:
-    def test_all_write_steps_have_gates(self):
-        gate_steps = {g.step_name for g in SUPPORT_WORKFLOW.approval_gates}
-        write_step_names = {s.name for s in _write_steps()}
-        assert write_step_names <= gate_steps
-
-    def test_gates_reference_known_steps(self):
-        step_names = _step_names()
-        for gate in SUPPORT_WORKFLOW.approval_gates:
-            assert gate.step_name in step_names
-
-    def test_gates_have_approver_roles(self):
-        for gate in SUPPORT_WORKFLOW.approval_gates:
-            assert gate.approver_role
 
 
 class TestFailureStates:
@@ -324,7 +293,6 @@ class TestValidation:
             resource_mappings=(),
             escalation_rules=(),
             redaction_rules=(),
-            approval_gates=(),
             failure_states=(),
         )
         assert any("duplicate" in v for v in validate_support_workflow(workflow))
@@ -346,7 +314,6 @@ class TestValidation:
             resource_mappings=(),
             escalation_rules=(),
             redaction_rules=(),
-            approval_gates=(),
             failure_states=(),
         )
         assert any("invalid kind" in v for v in validate_support_workflow(workflow))
@@ -368,32 +335,9 @@ class TestValidation:
             resource_mappings=(),
             escalation_rules=(),
             redaction_rules=(),
-            approval_gates=(),
             failure_states=(),
         )
         assert any("connector" in v for v in validate_support_workflow(workflow))
-
-    def test_write_without_approval_gate_flagged(self):
-        workflow = SupportWorkflow(
-            name="test",
-            version="0.1",
-            description="test",
-            steps=(
-                WorkflowStep(
-                    name="a",
-                    kind="write",
-                    tool_name="notion.update_page",
-                    connector="notion",
-                    description="a",
-                ),
-            ),
-            resource_mappings=(),
-            escalation_rules=(),
-            redaction_rules=(),
-            approval_gates=(),
-            failure_states=(),
-        )
-        assert any("approval gate" in v for v in validate_support_workflow(workflow))
 
     def test_secret_param_hint_flagged(self):
         workflow = SupportWorkflow(
@@ -413,7 +357,6 @@ class TestValidation:
             resource_mappings=(),
             escalation_rules=(),
             redaction_rules=(),
-            approval_gates=(),
             failure_states=(),
         )
         assert any("secret" in v for v in validate_support_workflow(workflow))
@@ -436,7 +379,6 @@ class TestValidation:
             resource_mappings=(),
             escalation_rules=(),
             redaction_rules=(),
-            approval_gates=(),
             failure_states=(),
         )
         assert any(
@@ -461,7 +403,6 @@ class TestValidation:
             resource_mappings=(),
             escalation_rules=(),
             redaction_rules=(),
-            approval_gates=(),
             failure_states=(),
         )
         assert any("URL" in v for v in validate_support_workflow(workflow))
@@ -483,7 +424,6 @@ class TestValidation:
             resource_mappings=(),
             escalation_rules=(),
             redaction_rules=(),
-            approval_gates=(),
             failure_states=(
                 FailureState(
                     step_name="nonexistent",
@@ -514,7 +454,6 @@ class TestValidation:
             resource_mappings=(),
             escalation_rules=(),
             redaction_rules=(),
-            approval_gates=(),
             failure_states=(),
         )
         assert any("fallback_step" in v for v in validate_support_workflow(workflow))
@@ -541,7 +480,6 @@ class TestValidation:
             resource_mappings=(),
             escalation_rules=(),
             redaction_rules=(),
-            approval_gates=(),
             failure_states=(),
         )
         assert any("max_retries" in v for v in validate_support_workflow(workflow))
@@ -562,30 +500,9 @@ class TestValidation:
                     description="test",
                 ),
             ),
-            approval_gates=(),
             failure_states=(),
         )
         assert any("field_pattern" in v for v in validate_support_workflow(workflow))
-
-    def test_approval_gate_unknown_step_flagged(self):
-        workflow = SupportWorkflow(
-            name="test",
-            version="0.1",
-            description="test",
-            steps=(),
-            resource_mappings=(),
-            escalation_rules=(),
-            redaction_rules=(),
-            approval_gates=(
-                ApprovalGate(
-                    step_name="nonexistent",
-                    approver_role="lead",
-                    description="test",
-                ),
-            ),
-            failure_states=(),
-        )
-        assert any("unknown step" in v for v in validate_support_workflow(workflow))
 
     def test_resource_mapping_unknown_connector_flagged(self):
         workflow = SupportWorkflow(
@@ -604,7 +521,6 @@ class TestValidation:
             ),
             escalation_rules=(),
             redaction_rules=(),
-            approval_gates=(),
             failure_states=(),
         )
         assert any("connector" in v for v in validate_support_workflow(workflow))
@@ -625,7 +541,6 @@ class TestValidation:
                 ),
             ),
             redaction_rules=(),
-            approval_gates=(),
             failure_states=(),
         )
         assert any("target_tool" in v for v in validate_support_workflow(workflow))

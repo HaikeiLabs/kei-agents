@@ -5,7 +5,6 @@ from __future__ import annotations
 from agents import Permission
 from agents.workflows.finance import (
     FINANCE_WORKFLOW_SPECS,
-    ApprovalGate,
     CRMLookup,
     CRMUpdate,
     DriveArchive,
@@ -50,9 +49,6 @@ class TestFinanceWorkflowTypes:
     def test_step_payload_union(self):
         read = DriveRead(entity=FinanceEntity.INVOICE)
         assert isinstance(read, StepPayload)
-
-        gate = ApprovalGate()
-        assert isinstance(gate, StepPayload)
 
         task = LinearTask(title="Test", labels=["finance"])
         assert isinstance(task, StepPayload)
@@ -107,13 +103,6 @@ class TestFinanceWorkflowTypes:
         assert payload.document_id is None
         assert payload.mime_type is None
 
-    def test_approval_gate_defaults(self):
-        gate = ApprovalGate()
-        assert gate.required_role == "finance_approver"
-        assert gate.reason == ""
-        assert gate.timeout_hours == 72
-        assert gate.escalation_role is None
-
     def test_linear_task_defaults(self):
         task = LinearTask(title="Test")
         assert task.description is None
@@ -128,7 +117,7 @@ class TestCanonicalWorkflows:
         spec = invoice_processing_workflow()
         assert spec.workflow_id == "finance.invoice_processing"
         assert spec.name == "Invoice Processing"
-        assert len(spec.steps) == 7
+        assert len(spec.steps) == 6
 
     def test_invoice_processing_starts_with_read(self):
         spec = invoice_processing_workflow()
@@ -139,39 +128,11 @@ class TestCanonicalWorkflows:
         spec = invoice_processing_workflow()
         assert isinstance(spec.steps[-1].payload, Notify)
 
-    def test_invoice_processing_has_approval_gate(self):
-        spec = invoice_processing_workflow()
-        assert any(isinstance(s.payload, ApprovalGate) for s in spec.steps)
-
-    def test_invoice_processing_mutations_after_approval(self):
-        spec = invoice_processing_workflow()
-        approval_idx = next(
-            i for i, s in enumerate(spec.steps) if isinstance(s.payload, ApprovalGate)
-        )
-        mutation_idxs = [
-            i
-            for i, s in enumerate(spec.steps)
-            if isinstance(s.payload, (CRMUpdate, DriveArchive))
-        ]
-        for idx in mutation_idxs:
-            assert idx > approval_idx, (
-                f"Mutation {spec.steps[idx].step_id} should appear after "
-                f"the approval gate (index {idx} > {approval_idx})"
-            )
-
-    def test_invoice_processing_mutations_depend_on_approval(self):
-        spec = invoice_processing_workflow()
-        for step in spec.steps:
-            if isinstance(step.payload, (CRMUpdate, DriveArchive)):
-                assert "approval" in step.depends_on, (
-                    f"{step.step_id} must depend on approval gate"
-                )
-
     def test_expense_report_has_correct_structure(self):
         spec = expense_report_workflow()
         assert spec.workflow_id == "finance.expense_report"
         assert spec.name == "Expense Report Processing"
-        assert len(spec.steps) == 6
+        assert len(spec.steps) == 5
 
     def test_expense_report_starts_with_read(self):
         spec = expense_report_workflow()
@@ -182,15 +143,11 @@ class TestCanonicalWorkflows:
         spec = expense_report_workflow()
         assert isinstance(spec.steps[-1].payload, Notify)
 
-    def test_expense_report_has_approval_gate(self):
-        spec = expense_report_workflow()
-        assert any(isinstance(s.payload, ApprovalGate) for s in spec.steps)
-
     def test_vendor_onboarding_has_correct_structure(self):
         spec = vendor_onboarding_workflow()
         assert spec.workflow_id == "finance.vendor_onboarding"
         assert spec.name == "Vendor Onboarding"
-        assert len(spec.steps) == 7
+        assert len(spec.steps) == 6
 
     def test_vendor_onboarding_starts_with_read(self):
         spec = vendor_onboarding_workflow()
@@ -240,33 +197,6 @@ class TestReadFirstValidation:
         )
         violations = validate_read_first(spec)
         assert any("must depend on a read step" in v for v in violations)
-        assert any("must depend on an approval gate" in v for v in violations)
-
-    def test_mutation_missing_approval_dependency_flagged(self):
-        spec = FinanceWorkflowSpec(
-            workflow_id="test.bad",
-            name="Bad",
-            description="Mutation with read but no approval",
-            steps=[
-                FinanceWorkflowStep(
-                    step_id="read",
-                    description="Read invoice",
-                    payload=DriveRead(entity=FinanceEntity.INVOICE),
-                ),
-                FinanceWorkflowStep(
-                    step_id="update",
-                    description="Update CRM",
-                    payload=CRMUpdate(
-                        entity_type="customer", record_id="123", updates={}
-                    ),
-                    permission=Permission.FINANCE_WRITE,
-                    depends_on=["read"],
-                ),
-            ],
-        )
-        violations = validate_read_first(spec)
-        assert any("must depend on an approval gate" in v for v in violations)
-        assert not any("must depend on a read step" in v for v in violations)
 
     def test_mutation_with_wrong_permission_flagged(self):
         spec = FinanceWorkflowSpec(
@@ -292,23 +222,6 @@ class TestReadFirstValidation:
         )
         violations = validate_read_first(spec)
         assert any("permission" in v for v in violations)
-
-    def test_approval_gate_with_wrong_permission_flagged(self):
-        spec = FinanceWorkflowSpec(
-            workflow_id="test.bad",
-            name="Bad",
-            description="Approval with wrong permission",
-            steps=[
-                FinanceWorkflowStep(
-                    step_id="approve",
-                    description="Approve",
-                    payload=ApprovalGate(),
-                    permission=Permission.FINANCE_READ,
-                ),
-            ],
-        )
-        violations = validate_read_first(spec)
-        assert any("approval gate requires finance_approve" in v for v in violations)
 
     def test_broken_dependency_flagged(self):
         spec = FinanceWorkflowSpec(
@@ -368,13 +281,11 @@ class TestWorkflowTags:
         spec = invoice_processing_workflow()
         assert "finance" in spec.tags
         assert "invoice" in spec.tags
-        assert "approval" in spec.tags
 
     def test_expense_report_tags(self):
         spec = expense_report_workflow()
         assert "finance" in spec.tags
         assert "expense" in spec.tags
-        assert "approval" in spec.tags
 
     def test_vendor_onboarding_tags(self):
         spec = vendor_onboarding_workflow()
@@ -388,16 +299,6 @@ def _read(step_id: str, depends_on: list[str] | None = None) -> FinanceWorkflowS
         step_id=step_id,
         description="read",
         payload=DriveRead(entity=FinanceEntity.INVOICE),
-        depends_on=depends_on or [],
-    )
-
-
-def _gate(step_id: str, depends_on: list[str] | None = None) -> FinanceWorkflowStep:
-    return FinanceWorkflowStep(
-        step_id=step_id,
-        description="gate",
-        payload=ApprovalGate(),
-        permission=Permission.FINANCE_APPROVE,
         depends_on=depends_on or [],
     )
 
@@ -463,58 +364,6 @@ class TestCycleDetection:
             vendor_onboarding_workflow,
         ):
             assert validate_read_first(factory()) == []
-
-
-class TestApprovalReachability:
-    """A gate may be any ancestor of a mutation, not only a direct dependency."""
-
-    def test_transitive_gate_satisfies_the_mutation(self):
-        spec = _spec(
-            [
-                _read("read"),
-                _gate("gate", ["read"]),
-                _read("enrich", ["gate"]),
-                _mutation("update", ["enrich"]),
-            ]
-        )
-        assert validate_read_first(spec) == []
-
-    def test_direct_gate_still_satisfies_the_mutation(self):
-        spec = _spec(
-            [
-                _read("read"),
-                _gate("gate", ["read"]),
-                _mutation("update", ["gate", "read"]),
-            ]
-        )
-        assert validate_read_first(spec) == []
-
-    def test_mutation_with_no_gate_anywhere_upstream_is_flagged(self):
-        spec = _spec([_read("read"), _mutation("update", ["read"])])
-        violations = validate_read_first(spec)
-        assert any("approval gate" in v for v in violations)
-
-    def test_gate_on_a_parallel_branch_does_not_count(self):
-        # The gate is not an ancestor of the mutation, so it cannot block it.
-        spec = _spec(
-            [
-                _read("read"),
-                _gate("gate", ["read"]),
-                _mutation("update", ["read"]),
-            ]
-        )
-        violations = validate_read_first(spec)
-        assert any("approval gate" in v for v in violations)
-
-    def test_transitive_read_satisfies_the_read_requirement(self):
-        spec = _spec(
-            [
-                _read("read"),
-                _gate("gate", ["read"]),
-                _mutation("update", ["gate"]),
-            ]
-        )
-        assert validate_read_first(spec) == []
 
 
 class TestGraphWellFormedness:

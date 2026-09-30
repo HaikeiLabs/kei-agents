@@ -1,11 +1,11 @@
 """Structural validation shared by workflow specs built from typed step DAGs.
 
-A domain spec (finance, fundraising) supplies which payload types are reads,
-mutations, and approval gates, and which permissions those steps must hold;
+A domain spec (finance, fundraising) supplies which payload types are reads
+and mutations, and which permissions those steps must hold;
 :func:`validate_step_graph` checks the graph. It validates *structure* only
--- a spec that passes is well formed, not permitted. Authorization, including
-whether an egress needs approval, is decided at invocation time by ABAC and
-the tenant-side proxy PEP (ADR-011). See docs/workflow-validation.md.
+— a spec that passes is well formed, not permitted. Authorization is decided
+at invocation time by ABAC and the tenant-side proxy PEP (ADR-011). See
+docs/workflow-validation.md.
 """
 
 from __future__ import annotations
@@ -80,14 +80,7 @@ def has_ancestor(
     by_id: dict[str, WorkflowStepLike],
     payload_types: tuple[type, ...],
 ) -> bool:
-    """Report whether a step with one of *payload_types* is an ancestor of *step*.
-
-    Reachability, not a direct edge: for approval gates, requiring a direct
-    edge would mean a step that legitimately depends on an intermediate read
-    could not be gated without also naming the gate, which authors get wrong
-    in the direction of removing the intermediate step rather than adding the
-    edge. The gate is still upstream, so it still blocks.
-    """
+    """Report whether a step with one of *payload_types* is an ancestor of *step*."""
     seen: set[str] = set()
     frontier = list(step.depends_on)
     while frontier:
@@ -109,16 +102,13 @@ def validate_step_graph(
     *,
     read_types: tuple[type, ...],
     mutation_types: tuple[type, ...],
-    gate_types: tuple[type, ...],
     mutation_permissions: tuple[Permission, ...],
-    approve_permission: Permission,
 ) -> list[str]:
-    """Validate a step DAG's read-first and approval invariants.
+    """Validate a step DAG's read-first invariants.
 
     Checks, in order: unique step ids, resolvable dependencies, no cycles;
     every permission is a typed :class:`Permission`; every mutation holds one
-    of *mutation_permissions* and has a read and an approval gate among its
-    ancestors; approval gates hold *approve_permission*.
+    of *mutation_permissions* and has a read among its ancestors.
 
     Returns a list of violations; an empty list means the graph is valid.
     """
@@ -168,16 +158,6 @@ def validate_step_graph(
                 violations.append(
                     f"{step.step_id}: mutation step must depend on a read step"
                 )
-            if not has_ancestor(step, by_id, gate_types):
-                violations.append(
-                    f"{step.step_id}: mutation step must depend on an approval gate"
-                )
-
-        if isinstance(step.payload, gate_types) and permission is not approve_permission:
-            violations.append(
-                f"{step.step_id}: approval gate requires "
-                f"{approve_permission.value} permission, got {permission.value!r}"
-            )
 
     return violations
 

@@ -56,10 +56,8 @@ class Permission(str, Enum):
     TITO_READ = "tito_read"
     FINANCE_READ = "finance_read"
     FINANCE_WRITE = "finance_write"
-    FINANCE_APPROVE = "finance_approve"
     FUNDRAISING_READ = "fundraising_read"
     FUNDRAISING_WRITE = "fundraising_write"
-    FUNDRAISING_APPROVE = "fundraising_approve"
     PROJECT_HOURS_READ = "project_hours_read"
     SEMANTIC_MODEL_READ = "semantic_model_read"
 

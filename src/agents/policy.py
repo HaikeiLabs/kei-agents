@@ -21,7 +21,6 @@ class AuthorizationResult(str, Enum):
 
     ALLOW = "allow"
     DENY = "deny"
-    REQUIRE_APPROVAL = "require_approval"
 
 
 @dataclass
@@ -41,7 +40,6 @@ class PermissionContext:
     user_id: str
     permissions: set[Permission] = field(default_factory=set)
     roles: set[str] = field(default_factory=set)
-    approval_context: dict[str, Any] = field(default_factory=dict)
 
     def has_permission(self, permission: Permission) -> bool:
         """Check if context has a specific permission."""

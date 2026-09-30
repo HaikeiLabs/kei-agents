@@ -1,9 +1,9 @@
 """Typed finance/bookkeeping workflow specification.
 
 Semantic step definitions for governed finance workflows that compose
-Drive (documents), CRM (customers/vendors), and Linear (tasks/approvals)
+Drive (documents), CRM (customers/vendors), and Linear (tasks/notifications)
 operations. Every workflow follows a read-first discipline: mutations are
-always preceded by a read step and gated behind an explicit approval.
+always preceded by a read step.
 
 This is a harness-neutral data specification. Each step defines domain
 intent only; the consuming harness resolves connector bindings, enforces
@@ -54,7 +54,6 @@ class FinanceStepCategory(str, Enum):
     CRM_READ = "crm_read"
     CRM_WRITE = "crm_write"
     LINEAR_TASK = "linear_task"
-    APPROVAL = "approval"
     NOTIFICATION = "notification"
 
 
@@ -118,16 +117,6 @@ class LinearTask:
 
 
 @dataclass
-class ApprovalGate:
-    """An explicit approval gate that blocks mutation steps until resolved."""
-
-    required_role: str = "finance_approver"
-    reason: str = ""
-    timeout_hours: int = 72
-    escalation_role: str | None = None
-
-
-@dataclass
 class Notify:
     """Send a notification about workflow progress."""
 
@@ -141,15 +130,7 @@ class Notify:
 # Composite types
 # ---------------------------------------------------------------------------
 
-StepPayload = (
-    DriveRead
-    | DriveArchive
-    | CRMLookup
-    | CRMUpdate
-    | LinearTask
-    | ApprovalGate
-    | Notify
-)
+StepPayload = DriveRead | DriveArchive | CRMLookup | CRMUpdate | LinearTask | Notify
 
 
 @dataclass
@@ -159,7 +140,7 @@ class FinanceWorkflowStep:
     Each step carries a domain-intent payload and metadata for dependency
     ordering and permission gating.  Steps are read-first: mutation payloads
     (CRMUpdate, DriveArchive) **must** be preceded by a corresponding read
-    step and gated by an ApprovalGate.
+    step.
     """
 
     step_id: str
@@ -223,21 +204,19 @@ def egress_steps(spec: FinanceWorkflowSpec) -> list[FinanceWorkflowStep]:
 
 
 def validate_read_first(spec: FinanceWorkflowSpec) -> list[str]:
-    """Validate a finance workflow's read-first and approval invariants.
+    """Validate a finance workflow's read-first invariants.
 
     Checks, in order: the step graph is well formed (unique ids, resolvable
-    dependencies, no cycles); every mutation depends on a read and is gated by
-    an approval; and approval gates carry the approval permission.
+    dependencies, no cycles); every mutation depends on a read step.
 
-    Dependency checks are by reachability, so a gate or read may be any
-    ancestor rather than a direct dependency.
+    Dependency checks are by reachability, so a read may be any ancestor
+    rather than a direct dependency.
 
-    This validates the *structure* of a spec -- properties that are true of
+    This validates the *structure* of a spec — properties that are true of
     the graph itself, independent of who runs it. It is not an authorization
-    check. Whether a particular subject may perform a step, and whether an
-    egress needs an approval in a given tenant, is decided at invocation time
-    by ABAC and the tenant-side proxy PEP (ADR-011). A spec that passes here
-    is well formed, not permitted.
+    check. Whether a particular subject may perform a step is decided at
+    invocation time by ABAC and the tenant-side proxy PEP (ADR-011). A spec
+    that passes here is well formed, not permitted.
 
     Returns a list of violations; an empty list means the spec is valid.
     """
@@ -245,9 +224,7 @@ def validate_read_first(spec: FinanceWorkflowSpec) -> list[str]:
         spec.steps,
         read_types=_READ_PAYLOAD_TYPES,
         mutation_types=_MUTATION_PAYLOAD_TYPES,
-        gate_types=(ApprovalGate,),
-        mutation_permissions=(Permission.FINANCE_WRITE, Permission.FINANCE_APPROVE),
-        approve_permission=Permission.FINANCE_APPROVE,
+        mutation_permissions=(Permission.FINANCE_WRITE,),
     )
 
 
@@ -263,10 +240,9 @@ def invoice_processing_workflow() -> FinanceWorkflowSpec:
       1. Read invoice from Drive
       2. Look up customer in CRM
       3. Create Linear review task
-      4. Approval gate
-      5. Update CRM with payment status (mutation)
-      6. Archive invoice in Drive (mutation)
-      7. Notify customer
+      4. Update CRM with payment status (mutation)
+      5. Archive invoice in Drive (mutation)
+      6. Notify customer
     """
     return FinanceWorkflowSpec(
         workflow_id="finance.invoice_processing",
@@ -274,7 +250,7 @@ def invoice_processing_workflow() -> FinanceWorkflowSpec:
         description=(
             "Process an invoice from receipt through approval and payment recording"
         ),
-        tags=["finance", "invoice", "approval"],
+        tags=["finance", "invoice"],
         steps=[
             FinanceWorkflowStep(
                 step_id="read_invoice",
@@ -300,16 +276,6 @@ def invoice_processing_workflow() -> FinanceWorkflowSpec:
                 depends_on=["read_invoice", "lookup_customer"],
             ),
             FinanceWorkflowStep(
-                step_id="approval",
-                description="Finance team approval of the invoice",
-                payload=ApprovalGate(
-                    required_role="finance_approver",
-                    reason="Invoice requires financial approval before payment",
-                ),
-                permission=Permission.FINANCE_APPROVE,
-                depends_on=["create_review_task"],
-            ),
-            FinanceWorkflowStep(
                 step_id="update_crm",
                 description="Update CRM with payment status",
                 payload=CRMUpdate(
@@ -318,7 +284,7 @@ def invoice_processing_workflow() -> FinanceWorkflowSpec:
                     updates={"payment_status": "paid"},
                 ),
                 permission=Permission.FINANCE_WRITE,
-                depends_on=["approval", "lookup_customer"],
+                depends_on=["create_review_task", "lookup_customer"],
             ),
             FinanceWorkflowStep(
                 step_id="archive_invoice",
@@ -328,7 +294,7 @@ def invoice_processing_workflow() -> FinanceWorkflowSpec:
                     document_id="",
                 ),
                 permission=Permission.FINANCE_WRITE,
-                depends_on=["approval", "read_invoice"],
+                depends_on=["create_review_task", "read_invoice"],
             ),
             FinanceWorkflowStep(
                 step_id="notify_customer",
@@ -346,21 +312,20 @@ def invoice_processing_workflow() -> FinanceWorkflowSpec:
 
 
 def expense_report_workflow() -> FinanceWorkflowSpec:
-    """Expense report submission and approval workflow.
+    """Expense report submission and processing workflow.
 
     Read-first discipline:
       1. Read receipt documents from Drive
       2. Look up vendor in CRM
       3. Create Linear audit task
-      4. Approval gate
-      5. Archive receipts (mutation)
-      6. Notify submitter
+      4. Archive receipts (mutation)
+      5. Notify submitter
     """
     return FinanceWorkflowSpec(
         workflow_id="finance.expense_report",
         name="Expense Report Processing",
         description=("Process an expense report from submission through approval"),
-        tags=["finance", "expense", "approval"],
+        tags=["finance", "expense"],
         steps=[
             FinanceWorkflowStep(
                 step_id="read_receipts",
@@ -386,17 +351,6 @@ def expense_report_workflow() -> FinanceWorkflowSpec:
                 depends_on=["read_receipts", "lookup_vendor"],
             ),
             FinanceWorkflowStep(
-                step_id="approval",
-                description="Manager approval of the expense report",
-                payload=ApprovalGate(
-                    required_role="expense_approver",
-                    reason="Expense report requires manager approval",
-                    timeout_hours=48,
-                ),
-                permission=Permission.FINANCE_APPROVE,
-                depends_on=["create_audit_task"],
-            ),
-            FinanceWorkflowStep(
                 step_id="archive_receipts",
                 description="Archive receipts in Drive",
                 payload=DriveArchive(
@@ -404,7 +358,7 @@ def expense_report_workflow() -> FinanceWorkflowSpec:
                     document_id="",
                 ),
                 permission=Permission.FINANCE_WRITE,
-                depends_on=["approval", "read_receipts"],
+                depends_on=["create_audit_task", "read_receipts"],
             ),
             FinanceWorkflowStep(
                 step_id="notify_submitter",
@@ -428,10 +382,9 @@ def vendor_onboarding_workflow() -> FinanceWorkflowSpec:
       1. Read vendor registration documents from Drive
       2. Look up potential vendor in CRM
       3. Create Linear onboarding task
-      4. Approval gate
-      5. Update vendor status in CRM (mutation)
-      6. Archive vendor documents (mutation)
-      7. Notify vendor
+      4. Update vendor status in CRM (mutation)
+      5. Archive vendor documents (mutation)
+      6. Notify vendor
     """
     return FinanceWorkflowSpec(
         workflow_id="finance.vendor_onboarding",
@@ -465,17 +418,6 @@ def vendor_onboarding_workflow() -> FinanceWorkflowSpec:
                 depends_on=["read_vendor_docs", "create_vendor_record"],
             ),
             FinanceWorkflowStep(
-                step_id="approval",
-                description="Finance team approval of the vendor",
-                payload=ApprovalGate(
-                    required_role="finance_approver",
-                    reason="New vendor requires financial approval",
-                    escalation_role="finance_manager",
-                ),
-                permission=Permission.FINANCE_APPROVE,
-                depends_on=["create_onboarding_task"],
-            ),
-            FinanceWorkflowStep(
                 step_id="update_vendor_status",
                 description="Update vendor status to approved in CRM",
                 payload=CRMUpdate(
@@ -484,7 +426,7 @@ def vendor_onboarding_workflow() -> FinanceWorkflowSpec:
                     updates={"status": "approved"},
                 ),
                 permission=Permission.FINANCE_WRITE,
-                depends_on=["approval", "create_vendor_record"],
+                depends_on=["create_onboarding_task", "create_vendor_record"],
             ),
             FinanceWorkflowStep(
                 step_id="archive_docs",
@@ -494,7 +436,7 @@ def vendor_onboarding_workflow() -> FinanceWorkflowSpec:
                     document_id="",
                 ),
                 permission=Permission.FINANCE_WRITE,
-                depends_on=["approval", "read_vendor_docs"],
+                depends_on=["create_onboarding_task", "read_vendor_docs"],
             ),
             FinanceWorkflowStep(
                 step_id="notify_vendor",
@@ -520,7 +462,6 @@ FINANCE_WORKFLOW_SPECS: dict[str, FinanceWorkflowSpec] = {
 
 __all__ = [
     "FINANCE_WORKFLOW_SPECS",
-    "ApprovalGate",
     "CRMLookup",
     "CRMUpdate",
     "DriveArchive",

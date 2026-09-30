@@ -1,16 +1,13 @@
 """Bug-to-Linear-PR workflow specification.
 
-A typed, harness-neutral four-stage workflow:
+A typed, harness-neutral three-stage workflow:
 
 1. **Bug intake** — accept and validate a bug report from any channel (web
    form, chat, API).  No Discord/provider client is embedded; the intake
    source is an orthogonal routing concern.
 2. **Linear ticket creation** — create a tracking issue in the governed Linear
    workspace via a semantic connector reference (``linear.create_issue``).
-3. **Approval gate** — block PR creation until an authorised reviewer approves.
-   The approval itself is a harness-level side effect (notification, UI, etc.);
-   the step simply records the decision.
-4. **GitHub PR creation** — create a pull request in the governed GitHub
+3. **GitHub PR creation** — create a pull request in the governed GitHub
    repository via the existing ``create_pull_request`` action tool.
 
 The spec references connectors **semantically** (by tool name string) so that
@@ -59,15 +56,6 @@ class LinearTicketRef:
 
     issue_key: str
     url: str = ""
-
-
-@dataclass
-class ApprovalDecision:
-    """Approval gate decision."""
-
-    approved: bool
-    reviewer: str | None = None
-    reason: str | None = None
 
 
 @dataclass
@@ -177,20 +165,7 @@ _STEP_LINEAR_TICKET = WorkflowStep(
         ),
     ],
     required_permissions=["linear_write", "linear_read"],
-    next_steps=["approval_gate"],
-)
-
-_STEP_APPROVAL_GATE = WorkflowStep(
-    name="approval_gate",
-    description=(
-        "Require human approval before proceeding to PR creation.  The approval"
-        " mechanism (notification, Slack message, dashboard) is a harness-level"
-        " side effect; this step only records the decision."
-    ),
-    input_type=LinearTicketRef,
-    output_type=ApprovalDecision,
-    required_permissions=[],
-    next_steps=["github_pr", None],  # None denotes terminal (rejected)
+    next_steps=["github_pr"],
 )
 
 _STEP_GITHUB_PR = WorkflowStep(
@@ -219,19 +194,18 @@ _STEP_GITHUB_PR = WorkflowStep(
 BUG_TO_LINEAR_PR = WorkflowSpec(
     name="bug_to_linear_pr",
     description=(
-        "Intake a bug report, create a Linear tracking ticket, await human"
-        " approval, then create a GitHub pull request.  Suitable for any"
-        " harness that can resolve the referenced connector tools."
+        "Intake a bug report, create a Linear tracking ticket, then create a"
+        " GitHub pull request.  Suitable for any harness that can resolve the"
+        " referenced connector tools."
     ),
     version="0.1.0",
     entry_step="bug_intake",
     steps=[
         _STEP_BUG_INTAKE,
         _STEP_LINEAR_TICKET,
-        _STEP_APPROVAL_GATE,
         _STEP_GITHUB_PR,
     ],
-    tags=["bug", "linear", "github", "approval-required"],
+    tags=["bug", "linear", "github"],
 )
 
 
@@ -300,7 +274,6 @@ def _reachable_steps(spec: WorkflowSpec) -> set[str]:
 
 __all__ = [
     "BUG_TO_LINEAR_PR",
-    "ApprovalDecision",
     "BugReport",
     "ConnectorRef",
     "LinearTicketRef",

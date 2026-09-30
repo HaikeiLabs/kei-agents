@@ -26,8 +26,7 @@ GMAIL_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
         name="gmail.search_messages",
         description=(
-            "Search messages in the governed mailbox; returns metadata and "
-            "snippet only"
+            "Search messages in the governed mailbox; returns metadata and snippet only"
         ),
         parameters=[
             ToolParameter(

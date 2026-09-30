@@ -18,11 +18,25 @@ LINEAR_CREATE_FOLLOWUP_TOOL = ToolDefinition(
     name="linear.create_followup_task",
     description="Create a Linear follow-up task from an approved, redacted CRM projection",
     parameters=[
-        ToolParameter(name="lead_id", description="Governed CRM lead identifier", required=True),
+        ToolParameter(
+            name="lead_id", description="Governed CRM lead identifier", required=True
+        ),
         ToolParameter(name="title", description="Follow-up task title", required=True),
-        ToolParameter(name="summary", description="Redacted CRM context approved for sharing", required=True),
-        ToolParameter(name="approval_id", description="Approval reference for the write", required=False),
-        ToolParameter(name="idempotency_key", description="Stable replay key for this task creation", required=True),
+        ToolParameter(
+            name="summary",
+            description="Redacted CRM context approved for sharing",
+            required=True,
+        ),
+        ToolParameter(
+            name="approval_id",
+            description="Approval reference for the write",
+            required=False,
+        ),
+        ToolParameter(
+            name="idempotency_key",
+            description="Stable replay key for this task creation",
+            required=True,
+        ),
     ],
     permission=Permission.LINEAR_WRITE,
     category=ToolCategory.LINEAR,
