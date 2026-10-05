@@ -7,15 +7,62 @@ resolve credentials. Provider execution and customer data retrieval happen in
 the tenant-side distributed proxy; Kei is a metadata catalog and ABAC is a
 policy decision point only.
 
+## Tool-manifest v3 route contract
+
+Each v3 entry retains common `source` and `operation_class` metadata and has a
+`route` object containing exactly one typed branch. Connector routes carry the
+registered `connector_id` plus explicit operation metadata; harness routes
+identify the executor and native registration and omit connector-only fields.
+There is no free-standing `execution_class` field.
+
+```json
+{
+  "schema": "kei.tool-manifest/v3",
+  "tools": [
+    {
+      "name": "github.get_issue",
+      "source": "github",
+      "operation_class": "read",
+      "route": {
+        "connector_binding": {"connector_id": "conn_github_1"}
+      },
+      "required_capabilities": ["issue.read"],
+      "resource_types": [{"type": "issue", "parent_type": "repository"}]
+    },
+    {
+      "name": "codex.shell",
+      "source": "codex",
+      "operation_class": "write",
+      "route": {
+        "harness_executor": {
+          "executor": "codex",
+          "registration": "codex.shell"
+        }
+      }
+    }
+  ]
+}
+```
+
+Connector `required_capabilities` (non-empty) and optional `resource_types`
+must be declared by a typed connector operation descriptor. These entry-level
+fields are not duplicated inside the route branch. Resource types may be omitted
+only when the capability is genuinely resource-less; they name kinds, never a
+resource ID. They are not inferred from `Permission`, `source`, or binding
+config. If a binding and a harness handler are both present, the connector
+binding selects the route. Unknown and malformed route branches fail closed.
+V2 manifests remain readable during migration.
+
 ## Design principles
 
 Each governed connector read schema expresses four things:
 
 1. **Capability binding** — a `Permission` gate (e.g. `linear_read`) and a
-   `ToolCategory` organize the capability and drive ABAC policy decisions.
-2. **Resource binding** — the `ToolBinding.config.resource` field names the
-   bound resource type (`repository`, `issues`, `objects`, `records`, ...).
-   The resource scope is governed routing metadata, not an agent parameter.
+   `ToolCategory` organize the schema; a separate explicit operation descriptor
+   declares canonical `required_capabilities` for the v3 route.
+2. **Resource binding** — typed operation metadata declares `resource_types`
+   (resource kinds such as `repository`, `issue`, or `object`). These are not
+   resource IDs and are not inferred from `ToolBinding.config`.
 3. **Action binding** — the tool `name` and `description` are the action
    (list/get). Reads are the only connector capabilities here; writes remain
    agent action tools, never connector capabilities.

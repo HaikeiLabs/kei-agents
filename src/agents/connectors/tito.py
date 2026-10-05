@@ -15,7 +15,9 @@ Tool names map to the kei-policy-catalog ``tito`` provider capabilities:
 from __future__ import annotations
 
 from agents.tool_definitions import (
+    ConnectorOperationDescriptor,
     Permission,
+    ResourceTypeDescriptor,
     ToolBinding,
     ToolCategory,
     ToolDefinition,
@@ -29,9 +31,10 @@ _EVENT_ID = ToolParameter(
 )
 
 
-def _binding(resource: str) -> ToolBinding:
+def _binding(resource: str, capability: str, resource_type: str) -> ToolBinding:
     return ToolBinding(
         connector_id="conn_tito_1",
+        operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=(capability,), resource_types=(ResourceTypeDescriptor(type=resource_type, parent_type="account"),)),
         config={"resource": resource},
         delegated_context=["tenant_id", "account"],
     )
@@ -40,36 +43,44 @@ def _binding(resource: str) -> ToolBinding:
 TITO_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
         name="tito.list_events",
+        source="tito",
+        operation_class="read",
         description="List events in the governed Tito account",
         parameters=[],
         permission=Permission.TITO_READ,
         category=ToolCategory.TITO,
         service="tito",
         tags=["tito-read", "governed-connector"],
-        binding=_binding("events"),
+        binding=_binding("events", "event.list", "event"),
     ),
     ToolDefinition(
         name="tito.get_event",
+        source="tito",
+        operation_class="read",
         description="Read a single event in the governed Tito account",
         parameters=[_EVENT_ID],
         permission=Permission.TITO_READ,
         category=ToolCategory.TITO,
         service="tito",
         tags=["tito-read", "governed-connector"],
-        binding=_binding("events"),
+        binding=_binding("events", "event.get", "event"),
     ),
     ToolDefinition(
         name="tito.list_releases",
+        source="tito",
+        operation_class="read",
         description="List ticket releases for an event in the governed Tito account",
         parameters=[_EVENT_ID],
         permission=Permission.TITO_READ,
         category=ToolCategory.TITO,
         service="tito",
         tags=["tito-read", "governed-connector"],
-        binding=_binding("releases"),
+        binding=_binding("releases", "release.list", "release"),
     ),
     ToolDefinition(
         name="tito.get_ticket_summary",
+        source="tito",
+        operation_class="read",
         description=(
             "Read aggregate ticket counts by state and type for an event; "
             "no attendee data"
@@ -79,7 +90,7 @@ TITO_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         category=ToolCategory.TITO,
         service="tito",
         tags=["tito-read", "governed-connector"],
-        binding=_binding("tickets"),
+        binding=_binding("tickets", "ticket.summary", "ticket"),
     ),
 ]
 

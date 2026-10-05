@@ -9,7 +9,9 @@ tenant-side distributed proxy - these schemas declare no handlers.
 from __future__ import annotations
 
 from agents.tool_definitions import (
+    ConnectorOperationDescriptor,
     Permission,
+    ResourceTypeDescriptor,
     ToolBinding,
     ToolCategory,
     ToolDefinition,
@@ -19,6 +21,8 @@ from agents.tool_definitions import (
 LINEAR_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
         name="linear.list_issues",
+        source="linear",
+        operation_class="read",
         description="List issues in the governed Linear workspace",
         parameters=[
             ToolParameter(
@@ -51,6 +55,7 @@ LINEAR_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="linear",
         tags=["linear-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("issue.read",), resource_types=(ResourceTypeDescriptor(type="issue", parent_type="team"),)),
             connector_id="conn_linear_1",
             config={"resource": "issues"},
             delegated_context=["tenant_id", "workspace"],
@@ -58,6 +63,8 @@ LINEAR_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="linear.get_issue",
+        source="linear",
+        operation_class="read",
         description="Read a single issue by its key in the governed Linear workspace",
         parameters=[
             ToolParameter(
@@ -71,6 +78,7 @@ LINEAR_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="linear",
         tags=["linear-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("issue.read",), resource_types=(ResourceTypeDescriptor(type="issue", parent_type="team"),)),
             connector_id="conn_linear_1",
             config={"resource": "issues"},
             delegated_context=["tenant_id", "workspace"],
@@ -78,6 +86,8 @@ LINEAR_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="linear.list_projects",
+        source="linear",
+        operation_class="read",
         description="List projects in the governed Linear workspace",
         parameters=[
             ToolParameter(
@@ -106,6 +116,7 @@ LINEAR_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="linear",
         tags=["linear-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("project.read",), resource_types=(ResourceTypeDescriptor(type="project", parent_type="team"),)),
             connector_id="conn_linear_1",
             config={"resource": "projects"},
             delegated_context=["tenant_id", "workspace"],

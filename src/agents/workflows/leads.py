@@ -17,7 +17,9 @@ from enum import Enum
 from typing import Any
 
 from agents.tool_definitions import (
+    ConnectorOperationDescriptor,
     Permission,
+    ResourceTypeDescriptor,
     ToolBinding,
     ToolCategory,
     ToolDefinition,
@@ -124,6 +126,13 @@ _WORKFLOW_CONNECTOR = ToolBinding(
 )
 
 _READ_COMMON: dict[str, Any] = {
+    "source": "crm",
+    "operation_class": "read",
+    "operation": ConnectorOperationDescriptor(
+        required_capabilities=("lead.read",),
+        resource_types=(ResourceTypeDescriptor(type="lead"),),
+        operation_class="read",
+    ),
     "permission": Permission.CRM_READ,
     "category": ToolCategory.CRM,
     "service": "crm",

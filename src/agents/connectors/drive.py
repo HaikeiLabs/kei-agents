@@ -9,7 +9,9 @@ URLs/credentials. Execution is delegated to the tenant-side distributed proxy
 from __future__ import annotations
 
 from agents.tool_definitions import (
+    ConnectorOperationDescriptor,
     Permission,
+    ResourceTypeDescriptor,
     ToolBinding,
     ToolCategory,
     ToolDefinition,
@@ -19,6 +21,8 @@ from agents.tool_definitions import (
 DRIVE_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
         name="drive.list_files",
+        source="drive",
+        operation_class="read",
         description="List files in the governed Drive",
         parameters=[
             ToolParameter(
@@ -44,6 +48,7 @@ DRIVE_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="drive",
         tags=["drive-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("drive.search",), resource_types=(ResourceTypeDescriptor(type="file", parent_type="drive"),)),
             connector_id="conn_drive_1",
             config={"resource": "files"},
             delegated_context=["tenant_id", "drive_id"],
@@ -51,6 +56,8 @@ DRIVE_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="drive.get_file",
+        source="drive",
+        operation_class="read",
         description="Read metadata for a single file in the governed Drive",
         parameters=[
             ToolParameter(
@@ -64,6 +71,7 @@ DRIVE_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="drive",
         tags=["drive-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("drive.metadata.read",), resource_types=(ResourceTypeDescriptor(type="file", parent_type="drive"),)),
             connector_id="conn_drive_1",
             config={"resource": "files"},
             delegated_context=["tenant_id", "drive_id"],
@@ -71,6 +79,8 @@ DRIVE_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="docs.get_document",
+        source="docs",
+        operation_class="read",
         description="Read a document's content from the governed Docs workspace",
         parameters=[
             ToolParameter(
@@ -91,6 +101,7 @@ DRIVE_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="drive",
         tags=["drive-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("docs.read",), resource_types=(ResourceTypeDescriptor(type="document", parent_type="drive"),)),
             connector_id="conn_drive_1",
             config={"resource": "documents"},
             delegated_context=["tenant_id", "drive_id"],

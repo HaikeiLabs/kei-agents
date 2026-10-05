@@ -9,7 +9,9 @@ tenant-side distributed proxy -- these schemas declare no handlers.
 from __future__ import annotations
 
 from agents.tool_definitions import (
+    ConnectorOperationDescriptor,
     Permission,
+    ResourceTypeDescriptor,
     ToolBinding,
     ToolCategory,
     ToolDefinition,
@@ -19,6 +21,8 @@ from agents.tool_definitions import (
 NOTION_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
         name="notion.list_pages",
+        source="notion",
+        operation_class="read",
         description=("Search or list pages in the governed Notion workspace"),
         parameters=[
             ToolParameter(
@@ -39,6 +43,7 @@ NOTION_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="notion",
         tags=["notion-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("search",), resource_types=(ResourceTypeDescriptor(type="page", parent_type="workspace"),)),
             connector_id="conn_notion_1",
             config={"resource": "pages"},
             delegated_context=["tenant_id", "workspace"],
@@ -46,6 +51,8 @@ NOTION_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="notion.get_page",
+        source="notion",
+        operation_class="read",
         description="Read a single page from the governed Notion workspace",
         parameters=[
             ToolParameter(
@@ -59,6 +66,7 @@ NOTION_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="notion",
         tags=["notion-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("page.read",), resource_types=(ResourceTypeDescriptor(type="page", parent_type="workspace"),)),
             connector_id="conn_notion_1",
             config={"resource": "pages"},
             delegated_context=["tenant_id", "workspace"],
@@ -66,6 +74,8 @@ NOTION_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="notion.list_databases",
+        source="notion",
+        operation_class="read",
         description="List databases in the governed Notion workspace",
         parameters=[
             ToolParameter(
@@ -81,6 +91,7 @@ NOTION_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="notion",
         tags=["notion-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("database.query",), resource_types=(ResourceTypeDescriptor(type="database", parent_type="workspace"),)),
             connector_id="conn_notion_1",
             config={"resource": "databases"},
             delegated_context=["tenant_id", "workspace"],
@@ -88,6 +99,8 @@ NOTION_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="notion.get_database",
+        source="notion",
+        operation_class="read",
         description="Read a single database from the governed Notion workspace",
         parameters=[
             ToolParameter(
@@ -101,6 +114,7 @@ NOTION_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="notion",
         tags=["notion-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("database.query",), resource_types=(ResourceTypeDescriptor(type="database", parent_type="workspace"),)),
             connector_id="conn_notion_1",
             config={"resource": "databases"},
             delegated_context=["tenant_id", "workspace"],

@@ -9,7 +9,9 @@ tenant-side distributed proxy - these schemas declare no handlers.
 from __future__ import annotations
 
 from agents.tool_definitions import (
+    ConnectorOperationDescriptor,
     Permission,
+    ResourceTypeDescriptor,
     ToolBinding,
     ToolCategory,
     ToolDefinition,
@@ -19,6 +21,8 @@ from agents.tool_definitions import (
 GITHUB_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
         name="github.get_repository",
+        source="github",
+        operation_class="read",
         description="Read metadata for the governed repository at a given ref",
         parameters=[
             ToolParameter(
@@ -33,6 +37,7 @@ GITHUB_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="github",
         tags=["github-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("repository.read",), resource_types=(ResourceTypeDescriptor(type="repository"),)),
             connector_id="conn_github_1",
             config={"resource": "repository", "default_branch": "main"},
             delegated_context=["tenant_id", "repository"],
@@ -40,6 +45,8 @@ GITHUB_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="github.get_issue",
+        source="github",
+        operation_class="read",
         description="Read a single issue in the governed repository",
         parameters=[
             ToolParameter(
@@ -54,6 +61,7 @@ GITHUB_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="github",
         tags=["github-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("issue.read",), resource_types=(ResourceTypeDescriptor(type="issue", parent_type="repository"),)),
             connector_id="conn_github_1",
             config={"resource": "issues"},
             delegated_context=["tenant_id", "repository"],
@@ -61,6 +69,8 @@ GITHUB_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="github.get_pull_request",
+        source="github",
+        operation_class="read",
         description="Read a single pull request in the governed repository",
         parameters=[
             ToolParameter(
@@ -75,6 +85,7 @@ GITHUB_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="github",
         tags=["github-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("pull_request.read",), resource_types=(ResourceTypeDescriptor(type="pull_request", parent_type="repository"),)),
             connector_id="conn_github_1",
             config={"resource": "pull_requests"},
             delegated_context=["tenant_id", "repository"],

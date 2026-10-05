@@ -54,8 +54,11 @@ from agents.policy import (
 from agents.tool_definitions import (
     ALL_TOOL_DEFINITIONS,
     TOOL_DEFINITIONS,
+    ConnectorOperationDescriptor,
+    HarnessExecutorRegistration,
     ModelFormat,
     Permission,
+    ResourceTypeDescriptor,
     ToolBinding,
     ToolCategory,
     ToolDefinition,
@@ -71,6 +74,7 @@ from agents.tool_definitions import (
     render_tools,
     validate_tool_definitions,
 )
+from agents.tool_manifest import render_tool_manifest
 
 __version__ = "0.1.0"
 
@@ -130,8 +134,10 @@ __all__ = [
     "AgentDefinition",
     "AuthorizationResult",
     "CRMAdapter",
+    "ConnectorOperationDescriptor",
     "GovernanceConfig",
     "Harness",
+    "HarnessExecutorRegistration",
     "Lead",
     "LeadSource",
     "LeadStatus",
@@ -147,6 +153,7 @@ __all__ = [
     "PermissionContext",
     "PolicyDecision",
     "PolicyEngine",
+    "ResourceTypeDescriptor",
     "ReviewAction",
     "ReviewActionKind",
     "ToolBinding",
@@ -167,6 +174,7 @@ __all__ = [
     "render_anthropic_tools",
     "render_ollama_tools",
     "render_openai_tools",
+    "render_tool_manifest",
     "render_tools",
     "validate_agent_definitions",
     "validate_tool_definitions",

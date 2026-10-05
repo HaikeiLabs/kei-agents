@@ -15,7 +15,9 @@ Tool names map to the kei-policy-catalog ``gmail`` provider capabilities:
 from __future__ import annotations
 
 from agents.tool_definitions import (
+    ConnectorOperationDescriptor,
     Permission,
+    ResourceTypeDescriptor,
     ToolBinding,
     ToolCategory,
     ToolDefinition,
@@ -25,6 +27,8 @@ from agents.tool_definitions import (
 GMAIL_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
         name="gmail.search_messages",
+        source="gmail",
+        operation_class="read",
         description=(
             "Search messages in the governed mailbox; returns metadata and snippet only"
         ),
@@ -52,6 +56,7 @@ GMAIL_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="gmail",
         tags=["gmail-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("message.search",), resource_types=(ResourceTypeDescriptor(type="message", parent_type="mailbox"),)),
             connector_id="conn_gmail_1",
             config={"resource": "messages"},
             delegated_context=["tenant_id", "mailbox"],
@@ -59,6 +64,8 @@ GMAIL_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="gmail.get_message",
+        source="gmail",
+        operation_class="read",
         description=(
             "Read a single message's metadata and snippet from the governed mailbox"
         ),
@@ -74,6 +81,7 @@ GMAIL_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="gmail",
         tags=["gmail-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("message.get",), resource_types=(ResourceTypeDescriptor(type="message", parent_type="mailbox"),)),
             connector_id="conn_gmail_1",
             config={"resource": "messages"},
             delegated_context=["tenant_id", "mailbox"],

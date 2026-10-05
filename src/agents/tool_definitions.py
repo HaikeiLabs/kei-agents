@@ -108,6 +108,32 @@ class ToolBinding:
     connector_id: str
     config: dict[str, Any] = field(default_factory=dict)
     delegated_context: list[str] = field(default_factory=list)
+    operation: ConnectorOperationDescriptor | None = None
+
+
+@dataclass(frozen=True)
+class ResourceTypeDescriptor:
+    """A canonical resource kind and optional parent kind, not a resource ID."""
+
+    type: str
+    parent_type: str | None = None
+
+
+@dataclass(frozen=True)
+class ConnectorOperationDescriptor:
+    """Explicit connector operation contract used for manifest routing."""
+
+    required_capabilities: tuple[str, ...]
+    resource_types: tuple[ResourceTypeDescriptor, ...]
+    operation_class: str
+
+
+@dataclass(frozen=True)
+class HarnessExecutorRegistration:
+    """Explicit harness-native tool registration; no connector metadata."""
+
+    executor: str
+    registration: str
 
 
 @dataclass
@@ -138,6 +164,10 @@ class ToolDefinition:
     tags: list[str] = field(default_factory=list)
     binding: ToolBinding | None = None
     handler: Callable[..., Any] | None = None
+    operation: ConnectorOperationDescriptor | None = None
+    source: str = ""
+    operation_class: str = ""
+    harness_registration: HarnessExecutorRegistration | None = None
 
     def __post_init__(self) -> None:
         if self.parameters is None:
@@ -201,6 +231,8 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="list_prs",
+        source="github",
+        operation_class="read",
         description="List GitHub pull requests",
         parameters=[
             ToolParameter(
@@ -223,12 +255,15 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="github",
         tags=["github-read"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("pull_request.read",), resource_types=(ResourceTypeDescriptor(type="pull_request"),)),
             connector_id="conn_github_1",
             config={"default_branch": "main"},
         ),
     ),
     ToolDefinition(
         name="list_issues",
+        source="github",
+        operation_class="read",
         description="List GitHub issues",
         parameters=[
             ToolParameter(
@@ -256,6 +291,7 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="github",
         tags=["github-read"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("issue.read",), resource_types=(ResourceTypeDescriptor(type="issue"),)),
             connector_id="conn_github_1",
             config={"default_branch": "main"},
         ),
@@ -286,6 +322,8 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="get_workflow_status",
+        source="github",
+        operation_class="read",
         description="Get CI/CD workflow status",
         parameters=[
             ToolParameter(
@@ -297,6 +335,7 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="github",
         tags=["github-read"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("workflow.read",), resource_types=(ResourceTypeDescriptor(type="workflow"),)),
             connector_id="conn_github_1",
             config={"default_branch": "main"},
         ),
@@ -614,6 +653,35 @@ def validate_tool_definitions(tools: list[ToolDefinition]) -> list[str]:
             and tool.permission.value.endswith(_READ_PERMISSION_SUFFIX)
         )
         if is_connector_read:
+            operation = tool.operation or (tool.binding.operation if tool.binding else None)
+            if operation is None:
+                violations.append(
+                    f"{tool.name}: connector tools must declare an explicit operation descriptor"
+                )
+            elif not operation.required_capabilities:
+                violations.append(
+                    f"{tool.name}: connector operation requires non-empty capabilities"
+                )
+            else:
+                if operation.operation_class != tool.operation_class:
+                    violations.append(
+                        f"{tool.name}: connector operation_class does not match route metadata"
+                    )
+                if len(set(operation.required_capabilities)) != len(operation.required_capabilities) or any(
+                    not _NAME_RE.fullmatch(capability) for capability in operation.required_capabilities
+                ):
+                    violations.append(f"{tool.name}: invalid connector required_capabilities")
+                resource_names = [resource.type for resource in operation.resource_types]
+                if len(set(resource_names)) != len(resource_names) or any(
+                    not _FIELD_RE.fullmatch(resource.type)
+                    or resource.parent_type is not None and not _FIELD_RE.fullmatch(resource.parent_type)
+                    for resource in operation.resource_types
+                ):
+                    violations.append(f"{tool.name}: invalid connector resource_types")
+            if not tool.source or tool.operation_class not in {"read", "write"}:
+                violations.append(
+                    f"{tool.name}: connector route requires source and operation_class metadata"
+                )
             if tool.handler is not None:
                 violations.append(
                     f"{tool.name}: governed connector read tools must not declare "
@@ -623,6 +691,14 @@ def validate_tool_definitions(tools: list[ToolDefinition]) -> list[str]:
                 violations.append(
                     f"{tool.name}: governed connector read tools must declare a service"
                 )
+        if tool.binding is not None and tool.harness_registration is not None:
+            # Connector binding wins; the handler is retained only as local
+            # metadata and never changes the generated route.
+            pass
+        elif tool.harness_registration is not None and (
+            not tool.harness_registration.executor or not tool.harness_registration.registration
+        ):
+            violations.append(f"{tool.name}: incomplete harness executor registration")
         delegated = set(tool.binding.delegated_context) if tool.binding else set()
         for param in _tool_parameters(tool):
             if not param.name:

@@ -9,7 +9,9 @@ URLs/credentials. Execution is delegated to the tenant-side distributed proxy
 from __future__ import annotations
 
 from agents.tool_definitions import (
+    ConnectorOperationDescriptor,
     Permission,
+    ResourceTypeDescriptor,
     ToolBinding,
     ToolCategory,
     ToolDefinition,
@@ -19,6 +21,8 @@ from agents.tool_definitions import (
 HTTP_API_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
         name="http_api.list_records",
+        source="http_api",
+        operation_class="read",
         description="List records of an entity through the governed http_api/CRM connection",
         parameters=[
             ToolParameter(
@@ -52,6 +56,7 @@ HTTP_API_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="http_api",
         tags=["http-read", "governed-connector", "crm-read"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("http.get",), resource_types=(ResourceTypeDescriptor(type="record"),)),
             connector_id="conn_http_api_1",
             config={"resource": "records", "api": "crm"},
             delegated_context=["tenant_id"],
@@ -59,6 +64,8 @@ HTTP_API_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="http_api.get_record",
+        source="http_api",
+        operation_class="read",
         description="Read a single record through the governed http_api/CRM connection",
         parameters=[
             ToolParameter(
@@ -78,6 +85,7 @@ HTTP_API_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="http_api",
         tags=["http-read", "governed-connector", "crm-read"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("http.get",), resource_types=(ResourceTypeDescriptor(type="record"),)),
             connector_id="conn_http_api_1",
             config={"resource": "records", "api": "crm"},
             delegated_context=["tenant_id"],

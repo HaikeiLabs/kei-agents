@@ -9,7 +9,9 @@ URLs/credentials. Execution is delegated to the tenant-side distributed proxy
 from __future__ import annotations
 
 from agents.tool_definitions import (
+    ConnectorOperationDescriptor,
     Permission,
+    ResourceTypeDescriptor,
     ToolBinding,
     ToolCategory,
     ToolDefinition,
@@ -19,6 +21,8 @@ from agents.tool_definitions import (
 S3_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
         name="s3.list_objects",
+        source="s3",
+        operation_class="read",
         description="List objects in the governed bucket",
         parameters=[
             ToolParameter(
@@ -44,6 +48,7 @@ S3_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="s3",
         tags=["s3-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("object.list",), resource_types=(ResourceTypeDescriptor(type="object", parent_type="bucket"),)),
             connector_id="conn_s3_1",
             config={"resource": "objects"},
             delegated_context=["tenant_id", "bucket"],
@@ -51,6 +56,8 @@ S3_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="s3.get_object",
+        source="s3",
+        operation_class="read",
         description="Read an object from the governed bucket",
         parameters=[
             ToolParameter(
@@ -69,6 +76,7 @@ S3_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="s3",
         tags=["s3-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("object.read",), resource_types=(ResourceTypeDescriptor(type="object", parent_type="bucket"),)),
             connector_id="conn_s3_1",
             config={"resource": "objects"},
             delegated_context=["tenant_id", "bucket"],
@@ -76,6 +84,8 @@ S3_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="s3.get_object_metadata",
+        source="s3",
+        operation_class="read",
         description="Read metadata for an object in the governed bucket without its body",
         parameters=[
             ToolParameter(
@@ -89,6 +99,7 @@ S3_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
         service="s3",
         tags=["s3-read", "governed-connector"],
         binding=ToolBinding(
+            operation=ConnectorOperationDescriptor(operation_class="read", required_capabilities=("object.read",), resource_types=(ResourceTypeDescriptor(type="object", parent_type="bucket"),)),
             connector_id="conn_s3_1",
             config={"resource": "objects"},
             delegated_context=["tenant_id", "bucket"],
