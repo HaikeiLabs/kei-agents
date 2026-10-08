@@ -1,0 +1,655 @@
+{
+  "schema": "haikei.eval-benchmark.v1",
+  "harness": "agentware",
+  "model_profile": "deepseek-v4-flash",
+  "model": "deepseek-ai/DeepSeek-V4-Flash",
+  "created_at": "2026-10-08T11:50:16+00:00",
+  "git_sha": "a27976371f3927ee445f64a2f2197f101f69385c",
+  "results": [
+    {
+      "suite": "kei-agents.pedro",
+      "kind": "agent",
+      "passed": 27,
+      "failed": 0,
+      "errors": 0,
+      "total": 27,
+      "pass_rate": 1.0,
+      "cases": [
+        {
+          "id": "file-bug-basic",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 28472
+        },
+        {
+          "id": "file-bug-named-team-critical",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 52316
+        },
+        {
+          "id": "file-bug-cosmetic-low",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 85427
+        },
+        {
+          "id": "file-bug-not-github-issue",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 71373
+        },
+        {
+          "id": "search-wiki-past-decision",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 64390
+        },
+        {
+          "id": "search-wiki-what-did-i-ask",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 72986
+        },
+        {
+          "id": "web-search-weather",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 20878
+        },
+        {
+          "id": "web-search-news",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 26224
+        },
+        {
+          "id": "no-tool-thanks",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 69237
+        },
+        {
+          "id": "no-tool-capabilities",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 106567
+        },
+        {
+          "id": "no-tool-general-knowledge",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 45422
+        },
+        {
+          "id": "admin-list-prs",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 41554
+        },
+        {
+          "id": "admin-get-pr-by-number",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 58909
+        },
+        {
+          "id": "admin-get-pr-other-repo",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 160045
+        },
+        {
+          "id": "admin-get-github-issue",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 28075
+        },
+        {
+          "id": "admin-ci-status",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 39974
+        },
+        {
+          "id": "admin-linear-issue-key",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 55263
+        },
+        {
+          "id": "admin-linear-urgent",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 53857
+        },
+        {
+          "id": "admin-drive-search",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 39558
+        },
+        {
+          "id": "admin-crm-lookup-email",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 68480
+        },
+        {
+          "id": "admin-crm-list-qualified",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 45462
+        },
+        {
+          "id": "admin-followup-task-parent-lead",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 51434
+        },
+        {
+          "id": "admin-approve-lead",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 31303
+        },
+        {
+          "id": "deny-member-list-leads",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 51931
+        },
+        {
+          "id": "deny-member-open-pr",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 76057
+        },
+        {
+          "id": "deny-member-drive",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 45504
+        },
+        {
+          "id": "deny-member-linear-read",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 64711
+        }
+      ]
+    },
+    {
+      "suite": "kei-agents.pde_search_agent",
+      "kind": "agent",
+      "passed": 16,
+      "failed": 0,
+      "errors": 0,
+      "total": 16,
+      "pass_rate": 1.0,
+      "cases": [
+        {
+          "id": "drive-search",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 10348
+        },
+        {
+          "id": "drive-file-metadata",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 10807
+        },
+        {
+          "id": "docs-read",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 14398
+        },
+        {
+          "id": "notion-search",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 9889
+        },
+        {
+          "id": "notion-get-page",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 16242
+        },
+        {
+          "id": "notion-list-databases",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 6709
+        },
+        {
+          "id": "gmail-search",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 12611
+        },
+        {
+          "id": "gmail-get-message",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 8055
+        },
+        {
+          "id": "tito-list-events",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 19402
+        },
+        {
+          "id": "tito-ticket-summary",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 15771
+        },
+        {
+          "id": "tito-releases",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 17343
+        },
+        {
+          "id": "no-tool-greeting",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 29253
+        },
+        {
+          "id": "no-tool-general-knowledge",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 11827
+        },
+        {
+          "id": "no-tool-write-refused",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 25452
+        },
+        {
+          "id": "deny-gmail-for-contractors",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 38330
+        },
+        {
+          "id": "deny-tito-for-contractors",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 19776
+        }
+      ]
+    },
+    {
+      "suite": "kei-agents.bug_to_linear_pr",
+      "kind": "agent",
+      "passed": 7,
+      "failed": 0,
+      "errors": 0,
+      "total": 7,
+      "pass_rate": 1.0,
+      "cases": [
+        {
+          "id": "linear-ticket-from-bug",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 33621
+        },
+        {
+          "id": "linear-ticket-named-team",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 28403
+        },
+        {
+          "id": "linear-read-back",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 17601
+        },
+        {
+          "id": "github-pr-from-fix-branch",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 24005
+        },
+        {
+          "id": "no-tool-how-it-works",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 26023
+        },
+        {
+          "id": "no-tool-needs-details",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 18586
+        },
+        {
+          "id": "deny-pr-without-github-write",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 40929
+        }
+      ]
+    },
+    {
+      "suite": "kei-agents.crm_linear_followup",
+      "kind": "agent",
+      "passed": 6,
+      "failed": 0,
+      "errors": 0,
+      "total": 6,
+      "pass_rate": 1.0,
+      "cases": [
+        {
+          "id": "lookup-lead-by-id",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 13530
+        },
+        {
+          "id": "lookup-lead-by-email",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 10978
+        },
+        {
+          "id": "followup-task-parent-lead",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 27395
+        },
+        {
+          "id": "lookup-only-no-write",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 6326
+        },
+        {
+          "id": "no-tool-what-is-it",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 9040
+        },
+        {
+          "id": "deny-task-for-read-only",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 30944
+        }
+      ]
+    },
+    {
+      "suite": "kei-agents.finance",
+      "kind": "agent",
+      "passed": 7,
+      "failed": 0,
+      "errors": 0,
+      "total": 7,
+      "pass_rate": 1.0,
+      "cases": [
+        {
+          "id": "drive-find-invoice",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 25641
+        },
+        {
+          "id": "docs-read-invoice",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 20097
+        },
+        {
+          "id": "crm-vendor-record-parent-entity",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 24809
+        },
+        {
+          "id": "crm-list-customers",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 25581
+        },
+        {
+          "id": "linear-review-task",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 37706
+        },
+        {
+          "id": "no-tool-accounting-question",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 40083
+        },
+        {
+          "id": "deny-task-for-read-only",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 54581
+        }
+      ]
+    },
+    {
+      "suite": "kei-agents.fundraising",
+      "kind": "agent",
+      "passed": 7,
+      "failed": 0,
+      "errors": 0,
+      "total": 7,
+      "pass_rate": 1.0,
+      "cases": [
+        {
+          "id": "pipeline-by-stage",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 39140
+        },
+        {
+          "id": "investor-record-parent-entity",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 83226
+        },
+        {
+          "id": "data-room-list",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 17867
+        },
+        {
+          "id": "data-room-read",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 24285
+        },
+        {
+          "id": "followup-task",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 25966
+        },
+        {
+          "id": "no-tool-term-question",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 33149
+        },
+        {
+          "id": "deny-task-for-read-only",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 39578
+        }
+      ]
+    },
+    {
+      "suite": "kei-agents.github_pr_review",
+      "kind": "agent",
+      "passed": 7,
+      "failed": 0,
+      "errors": 0,
+      "total": 7,
+      "pass_rate": 1.0,
+      "cases": [
+        {
+          "id": "review-pr",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 5744
+        },
+        {
+          "id": "review-pr-named-repo",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 13767
+        },
+        {
+          "id": "repository-default-branch",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 17607
+        },
+        {
+          "id": "repository-at-ref",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 13197
+        },
+        {
+          "id": "no-tool-approve-is-read-only",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 34072
+        },
+        {
+          "id": "no-tool-review-advice",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 57519
+        },
+        {
+          "id": "deny-review-without-pr-read",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 128733
+        }
+      ]
+    },
+    {
+      "suite": "kei-agents.leads",
+      "kind": "agent",
+      "passed": 7,
+      "failed": 0,
+      "errors": 0,
+      "total": 7,
+      "pass_rate": 1.0,
+      "cases": [
+        {
+          "id": "get-lead-status",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 17593
+        },
+        {
+          "id": "list-pending-approval",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 23345
+        },
+        {
+          "id": "create-lead",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 28408
+        },
+        {
+          "id": "submit-for-approval",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 18055
+        },
+        {
+          "id": "reject-with-reason",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 8329
+        },
+        {
+          "id": "no-tool-sales-question",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 12193
+        },
+        {
+          "id": "deny-approve-for-read-only",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 13487
+        }
+      ]
+    },
+    {
+      "suite": "kei-agents.support",
+      "kind": "agent",
+      "passed": 7,
+      "failed": 0,
+      "errors": 0,
+      "total": 7,
+      "pass_rate": 1.0,
+      "cases": [
+        {
+          "id": "search-tickets",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 19211
+        },
+        {
+          "id": "read-ticket-page",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 23985
+        },
+        {
+          "id": "account-record-parent-entity",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 21251
+        },
+        {
+          "id": "find-contract",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 11831
+        },
+        {
+          "id": "no-tool-escalation-rule",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 22888
+        },
+        {
+          "id": "no-tool-support-advice",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 25889
+        },
+        {
+          "id": "deny-account-for-notion-only",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 73313
+        }
+      ]
+    }
+  ]
+}

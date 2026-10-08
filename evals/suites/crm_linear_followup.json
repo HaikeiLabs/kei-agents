@@ -1,0 +1,211 @@
+{
+  "schema": "agentware.eval-suite.v1",
+  "suite": "kei-agents.crm_linear_followup",
+  "kind": "agent",
+  "system_prompt": "You run the CRM-to-Linear follow-up workflow: create Linear follow-up tasks for leads in the governed CRM, and look up leads when asked.\n\n## Which tool to call first\n\n- The user asks for a follow-up task and gives a lead id -> call `linear.create_followup_task` right away, as your first and only tool call, with all four required arguments: `lead_id`, `title`, `summary` (written from what the user asked for), and `idempotency_key` = `followup-<lead_id>`. The lead id is all you need; do not look the lead up first.\n- The user asks about a lead, or gives only an email address -> `crm_lookup_lead` (by `lead_id` when given, else by `email`). Then create a follow-up task only if the user asked for one.\n\nAnswer without a tool when the user only asks how the workflow works or asks a general question.\n\n## Arguments\n\n- `linear.create_followup_task` is a child of the lead: always pass the lead's `lead_id`. Write a short `title` (e.g. \"Follow up with <company>\") and a `summary` that contains no email addresses, phone numbers, or other personal contact details. Set `idempotency_key` to `followup-<lead_id>`.\n- Never pass tenant, organization, or workspace identifiers; the governed connections already scope the CRM and Linear.\n\n## Access\n\nAccess is enforced by Kei policy; you are not told the caller's role. Call the tool the request needs. If a tool result says the call was denied, say it was not allowed and that no task was created. Never claim a task exists unless a tool result says so.\n\nBe brief.\n",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "crm_lookup_lead",
+        "description": "Look up a lead by ID or email address",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "description": "The unique identifier of the lead"
+            },
+            "email": {
+              "type": "string",
+              "description": "The email address of the lead"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "linear.create_followup_task",
+        "description": "Create a Linear follow-up task for a CRM lead, by lead id. Call it directly when asked for a follow-up on a lead; the summary must not contain contact details",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "description": "Governed CRM lead identifier"
+            },
+            "title": {
+              "type": "string",
+              "description": "Follow-up task title"
+            },
+            "summary": {
+              "type": "string",
+              "description": "Redacted CRM context approved for sharing"
+            },
+            "approval_id": {
+              "type": "string",
+              "description": "Approval reference for the write"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "description": "Stable replay key for this task creation"
+            }
+          },
+          "required": [
+            "lead_id",
+            "title",
+            "summary",
+            "idempotency_key"
+          ]
+        }
+      }
+    }
+  ],
+  "repeats": 1,
+  "cases": [
+    {
+      "id": "lookup-lead-by-id",
+      "prompt": "Look up lead L-101.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "crm_lookup_lead",
+        "args": {
+          "lead_id": "L-101"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "lookup-lead-by-email",
+      "prompt": "Find the lead for sam@globex.com.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "crm_lookup_lead",
+        "args": {
+          "email": "sam@globex.com"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "followup-task-parent-lead",
+      "prompt": "Create a follow-up task for lead L-101: send them pricing after yesterday's demo.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "linear.create_followup_task",
+        "args": {
+          "lead_id": "L-101",
+          "idempotency_key": "followup-L-101"
+        },
+        "required_arg_keys": [
+          "title",
+          "summary"
+        ],
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner",
+          "team_key"
+        ]
+      }
+    },
+    {
+      "id": "lookup-only-no-write",
+      "prompt": "Just look up lead L-9 for me. Don't create anything.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "crm_lookup_lead",
+        "args": {
+          "lead_id": "L-9"
+        },
+        "forbidden_tools": [
+          "linear.create_followup_task"
+        ]
+      }
+    },
+    {
+      "id": "no-tool-what-is-it",
+      "prompt": "What is this follow-up workflow for?",
+      "expect": {
+        "tool": null
+      }
+    },
+    {
+      "id": "deny-task-for-read-only",
+      "prompt": "Create a follow-up task for lead L-55 to send over the contract.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "default"
+        ],
+        "allowed_tools": [
+          "crm_lookup_lead"
+        ]
+      },
+      "expect": {
+        "deny": true,
+        "content": {
+          "contains_any": [
+            "denied",
+            "not allowed",
+            "permission",
+            "access",
+            "admin",
+            "not authorized",
+            "unauthorized",
+            "unable",
+            "can't",
+            "cannot",
+            "can not",
+            "couldn't",
+            "could not"
+          ]
+        },
+        "tool": "linear.create_followup_task",
+        "args": {
+          "lead_id": "L-55"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,264 @@
+{
+  "schema": "agentware.eval-suite.v1",
+  "suite": "kei-agents.bug_to_linear_pr",
+  "kind": "agent",
+  "system_prompt": "You run the bug_to_linear_pr workflow: take a bug report, file a Linear tracking issue for it, and, when a fix branch exists, open a GitHub pull request.\n\n## Steps and tools\n\n1. Bug intake: read the report from the user's message. Do not call a tool for intake.\n2. Linear ticket: create the tracking issue with `linear.create_issue`. Read an existing issue back with `linear.get_issue` when the user gives an issue key and asks about it.\n3. GitHub PR: when the user says a fix is on a branch and asks for a pull request, call `create_pull_request` with that branch as `head`.\n\nCall one tool per user request, the one for the step the user is asking for.\n\nAnswer without a tool when the user only asks how the workflow works, asks a general question, or has not described a bug yet (then ask what is broken).\n\n## Arguments\n\n- `linear.create_issue` needs `team_key`, the team that owns the issue. Our product team is `KEI`; use another key only when the user names one. Put a short summary in `title` and the details in `description`. Map severity to `priority`: critical -> `urgent`, high -> `high`, medium -> `medium`, low -> `low`. Add `labels` = `bug`.\n- `linear.get_issue` takes the full key with its team prefix, e.g. `KEI-123`.\n- `create_pull_request`: `head` is the fix branch exactly as the user wrote it; `base` is `main` unless the user names another branch. Mention the Linear issue key in `body` when you know it.\n- Never pass tenant, organization, workspace, repository, or owner identifiers. The governed connections already scope Linear to the workspace and GitHub to the repository.\n\n## Access\n\nAccess is enforced by Kei policy; you are not told the caller's role. Call the tool the request needs. If a tool result says the call was denied, tell the user it was not allowed and that nothing was created. Never claim an issue or PR exists unless a tool result says so.\n\nBe brief.\n",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "linear.create_issue",
+        "description": "Create an issue in a team of the governed Linear workspace. Use to track work such as a bug, review, or follow-up task.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "team_key": {
+              "type": "string",
+              "description": "Key of the Linear team that owns the issue (the prefix of its issue keys, e.g. KEI for KEI-123)"
+            },
+            "title": {
+              "type": "string",
+              "description": "Issue title"
+            },
+            "description": {
+              "type": "string",
+              "description": "Issue body in Markdown"
+            },
+            "priority": {
+              "type": "string",
+              "description": "Issue priority",
+              "enum": [
+                "urgent",
+                "high",
+                "medium",
+                "low",
+                "none"
+              ]
+            },
+            "labels": {
+              "type": "string",
+              "description": "Comma-separated label names"
+            }
+          },
+          "required": [
+            "team_key",
+            "title"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "linear.get_issue",
+        "description": "Read a single issue by its key in the governed Linear workspace",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "issue_key": {
+              "type": "string",
+              "description": "Issue key, e.g. ENG-123"
+            }
+          },
+          "required": [
+            "issue_key"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "create_pull_request",
+        "description": "Create PRs",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "PR title"
+            },
+            "body": {
+              "type": "string",
+              "description": "PR body/description"
+            },
+            "head": {
+              "type": "string",
+              "description": "The branch where changes are implemented"
+            },
+            "base": {
+              "type": "string",
+              "description": "The branch the changes should be pulled into"
+            }
+          },
+          "required": [
+            "title",
+            "head"
+          ]
+        }
+      }
+    }
+  ],
+  "repeats": 1,
+  "cases": [
+    {
+      "id": "linear-ticket-from-bug",
+      "prompt": "Bug: the export button returns a 500 for CSV files. Severity high. File it in Linear.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "linear.create_issue",
+        "args": {
+          "team_key": "KEI",
+          "priority": "high"
+        },
+        "required_arg_keys": [
+          "title"
+        ],
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "linear-ticket-named-team",
+      "prompt": "The ingest worker drops messages when the queue is full. It belongs to the DATA team, medium severity. Please open the tracking ticket.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "linear.create_issue",
+        "args": {
+          "team_key": "DATA",
+          "priority": "medium"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "linear-read-back",
+      "prompt": "What's the status of KEI-321?",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "linear.get_issue",
+        "args": {
+          "issue_key": "KEI-321"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "github-pr-from-fix-branch",
+      "prompt": "The fix for KEI-321 is on branch fix/export-500. Open the pull request.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "create_pull_request",
+        "args": {
+          "head": "fix/export-500"
+        },
+        "required_arg_keys": [
+          "title"
+        ],
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ],
+        "forbidden_tools": [
+          "linear.create_issue"
+        ]
+      }
+    },
+    {
+      "id": "no-tool-how-it-works",
+      "prompt": "How does the bug to Linear to PR workflow work?",
+      "expect": {
+        "tool": null
+      }
+    },
+    {
+      "id": "no-tool-needs-details",
+      "prompt": "I want to report something.",
+      "expect": {
+        "tool": null
+      }
+    },
+    {
+      "id": "deny-pr-without-github-write",
+      "prompt": "Branch fix/typo-footer has the fix for KEI-9. Open a PR into main.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "default"
+        ],
+        "allowed_tools": [
+          "linear.create_issue",
+          "linear.get_issue"
+        ]
+      },
+      "expect": {
+        "deny": true,
+        "content": {
+          "contains_any": [
+            "denied",
+            "not allowed",
+            "permission",
+            "access",
+            "admin",
+            "not authorized",
+            "unauthorized",
+            "unable",
+            "can't",
+            "cannot",
+            "can not",
+            "couldn't",
+            "could not"
+          ]
+        },
+        "tool": "create_pull_request",
+        "args": {
+          "head": "fix/typo-footer"
+        }
+      }
+    }
+  ]
+}

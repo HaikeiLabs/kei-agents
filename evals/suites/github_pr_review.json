@@ -1,0 +1,186 @@
+{
+  "schema": "agentware.eval-suite.v1",
+  "suite": "kei-agents.github_pr_review",
+  "kind": "agent",
+  "system_prompt": "You run the GitHub pull request review workflow for the governed repository: fetch the pull request, fetch repository context, analyze the change, and report structured findings (critical, warning, info, question). The workflow is read-only: you never post comments, approve, request changes, merge, or close.\n\n## Tools\n\n- Read a pull request by number -> `github.get_pull_request` with `pr_number` as an integer (`#42` -> `42`).\n- Read repository metadata (default branch, description) -> `github.get_repository`, with `ref` only when the user names a branch or tag.\n\nWhen asked to review a pull request, start with `github.get_pull_request`.\n\nAnswer without a tool for general code review questions and questions about how the review works. If the user asks you to approve, comment on, merge, or close a pull request, explain the review is read-only and that a person must take that action; do not call a tool for it.\n\n## Arguments\n\n- Use only the arguments in the tool schema.\n- Never pass repository, owner, organization, or tenant identifiers; the governed connection is already bound to one repository. If the user names another repository, review in the bound repository only and say so.\n\n## Access\n\nAccess is enforced by Kei policy; you are not told the caller's role. Call the tool the request needs. If a tool result says the call was denied, tell the user the review could not run because access was denied. Never invent pull request contents.\n\nBe concise; list findings by severity.\n",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "github.get_pull_request",
+        "description": "Read a single pull request in the governed repository",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "pr_number": {
+              "type": "integer",
+              "description": "Pull request number within the governed repository"
+            }
+          },
+          "required": [
+            "pr_number"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "github.get_repository",
+        "description": "Read metadata for the governed repository at a given ref",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "ref": {
+              "type": "string",
+              "description": "Branch or tag to inspect; defaults to the default branch"
+            }
+          },
+          "required": []
+        }
+      }
+    }
+  ],
+  "repeats": 1,
+  "cases": [
+    {
+      "id": "review-pr",
+      "prompt": "Review PR #57.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "github.get_pull_request",
+        "args": {
+          "pr_number": 57
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner",
+          "repo"
+        ]
+      }
+    },
+    {
+      "id": "review-pr-named-repo",
+      "prompt": "Review pull request 12 in acme/widgets.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "github.get_pull_request",
+        "args": {
+          "pr_number": 12
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner",
+          "repo"
+        ]
+      }
+    },
+    {
+      "id": "repository-default-branch",
+      "prompt": "What's the default branch of this repository?",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "github.get_repository",
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner",
+          "repo"
+        ]
+      }
+    },
+    {
+      "id": "repository-at-ref",
+      "prompt": "Show the repository metadata for the release-2.0 branch.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "github.get_repository",
+        "args": {
+          "ref": "release-2.0"
+        }
+      }
+    },
+    {
+      "id": "no-tool-approve-is-read-only",
+      "prompt": "Approve PR #57 for me.",
+      "expect": {
+        "tool": null
+      }
+    },
+    {
+      "id": "no-tool-review-advice",
+      "prompt": "What makes a good code review?",
+      "expect": {
+        "tool": null
+      }
+    },
+    {
+      "id": "deny-review-without-pr-read",
+      "prompt": "Review PR #8.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "default"
+        ],
+        "allowed_tools": [
+          "github.get_repository"
+        ]
+      },
+      "expect": {
+        "deny": true,
+        "content": {
+          "contains_any": [
+            "denied",
+            "not allowed",
+            "permission",
+            "access",
+            "admin",
+            "not authorized",
+            "unauthorized",
+            "unable",
+            "can't",
+            "cannot",
+            "can not",
+            "couldn't",
+            "could not"
+          ]
+        },
+        "tool": "github.get_pull_request",
+        "args": {
+          "pr_number": 8
+        }
+      }
+    }
+  ]
+}

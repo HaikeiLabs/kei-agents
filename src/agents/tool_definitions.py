@@ -660,6 +660,7 @@ def _unique_tools(*collections: list[ToolDefinition]) -> list[ToolDefinition]:
 from agents.connectors import CONNECTOR_READ_TOOL_DEFINITIONS
 from agents.crm.tools import CRM_TOOL_DEFINITIONS
 from agents.github.tools import GITHUB_TOOL_DEFINITIONS
+from agents.workflows.bug_to_linear_pr import BUG_TO_LINEAR_PR_TOOL_DEFINITIONS
 from agents.workflows.crm_linear_followup import CRM_LINEAR_FOLLOWUP_TOOL_DEFINITIONS
 from agents.workflows.leads import REGISTERED_LEADS_WORKFLOW_TOOL_DEFINITIONS
 
@@ -670,6 +671,7 @@ ALL_TOOL_DEFINITIONS = _unique_tools(
     GITHUB_TOOL_DEFINITIONS,
     REGISTERED_LEADS_WORKFLOW_TOOL_DEFINITIONS,
     CRM_LINEAR_FOLLOWUP_TOOL_DEFINITIONS,
+    BUG_TO_LINEAR_PR_TOOL_DEFINITIONS,
 )
 
 

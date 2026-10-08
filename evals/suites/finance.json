@@ -1,0 +1,335 @@
+{
+  "schema": "agentware.eval-suite.v1",
+  "suite": "kei-agents.finance",
+  "kind": "agent",
+  "system_prompt": "You run the finance workflows (invoice processing, expense reports, vendor onboarding) for the finance team. You do one step per request: the step the user asks for. The harness sequences the workflow and makes sure documents and records are read before anything changes, so you never need to read first on your own.\n\n## Tools\n\n- Find finance documents (invoices, receipts, statements, vendor forms) in the governed Drive -> `drive.list_files` with search words in `query`. Metadata for one file by id -> `drive.get_file`. Read a document's content by id -> `docs.get_document`.\n- Customer and vendor records in the governed CRM: list or search -> `http_api.list_records`; one record by id -> `http_api.get_record`. Always set `entity` to `customers` or `vendors`.\n- Create a Linear review, audit, or onboarding task -> `linear.create_issue` with `team_key` `FIN` (the finance team) unless the user names another team, `labels` including `finance`, and `priority` from `urgent`, `high`, `medium`, `low`, `none`.\n\n## Which tool to call first\n\nYour first tool call must be the tool for what the user asked:\n\n- The user gives a document id (e.g. `inv-2026-0912`) -> `docs.get_document` with that id. Do not search Drive first.\n- The user asks you to find or list documents and gives no id -> `drive.list_files`.\n- The user asks for a review, audit, or onboarding task -> `linear.create_issue` right away. Do not search Drive or the CRM first; write the title from the user's words.\n- The user names a CRM record id -> `http_api.get_record`; asks to list or find customers or vendors -> `http_api.list_records`.\n\nMake one tool call, then answer from its result. Call a second tool only if the user explicitly asked for two things. You cannot mark payments, change CRM records, archive files, or send email yourself; for those, say the harness does them after review, and offer to create the Linear task instead.\n\nAnswer without a tool for general accounting questions and questions about how the workflows work.\n\n## Arguments\n\n- A record is a child of its entity: pass `entity` with every CRM call, and `record_id` exactly as given.\n- Never pass tenant, organization, workspace, or drive identifiers; the governed connections already scope Drive, the CRM, and Linear.\n\n## Access\n\nAccess is enforced by Kei policy; you are not told the caller's role. Call the tool the request needs. If a tool result says the call was denied, stop calling tools and reply at once: say the request was denied, it was not allowed, and nothing changed. Never claim a task, record, or document exists unless a tool result says so.\n\nBe brief and precise with amounts and dates.\n",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "drive.list_files",
+        "description": "List files in the governed Drive",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search query applied within the governed Drive"
+            },
+            "mime_type": {
+              "type": "string",
+              "description": "Filter by MIME type (e.g. text/plain)"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of files to return"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "drive.get_file",
+        "description": "Read metadata for a single file in the governed Drive",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "file_id": {
+              "type": "string",
+              "description": "File identifier within the governed Drive"
+            }
+          },
+          "required": [
+            "file_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "docs.get_document",
+        "description": "Read a document's content from the governed Docs workspace",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "Document identifier within the governed Docs workspace"
+            },
+            "plain_text": {
+              "type": "boolean",
+              "description": "Return plain text instead of structured content"
+            }
+          },
+          "required": [
+            "document_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "http_api.list_records",
+        "description": "List records of an entity through the governed http_api/CRM connection",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "entity": {
+              "type": "string",
+              "description": "Entity to list (e.g. leads); defaults to the bound entity"
+            },
+            "filters": {
+              "type": "string",
+              "description": "Query-style filters applied within the governed connection"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of records to return"
+            },
+            "offset": {
+              "type": "integer",
+              "description": "Number of records to skip"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "http_api.get_record",
+        "description": "Read a single record through the governed http_api/CRM connection",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "entity": {
+              "type": "string",
+              "description": "Entity the record belongs to (e.g. leads)"
+            },
+            "record_id": {
+              "type": "string",
+              "description": "Record identifier within the governed connection"
+            }
+          },
+          "required": [
+            "record_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "linear.create_issue",
+        "description": "Create an issue in a team of the governed Linear workspace. Use to track work such as a bug, review, or follow-up task.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "team_key": {
+              "type": "string",
+              "description": "Key of the Linear team that owns the issue (the prefix of its issue keys, e.g. KEI for KEI-123)"
+            },
+            "title": {
+              "type": "string",
+              "description": "Issue title"
+            },
+            "description": {
+              "type": "string",
+              "description": "Issue body in Markdown"
+            },
+            "priority": {
+              "type": "string",
+              "description": "Issue priority",
+              "enum": [
+                "urgent",
+                "high",
+                "medium",
+                "low",
+                "none"
+              ]
+            },
+            "labels": {
+              "type": "string",
+              "description": "Comma-separated label names"
+            }
+          },
+          "required": [
+            "team_key",
+            "title"
+          ]
+        }
+      }
+    }
+  ],
+  "repeats": 1,
+  "cases": [
+    {
+      "id": "drive-find-invoice",
+      "prompt": "Find the Acme invoice from September in Drive.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "drive.list_files",
+        "required_arg_keys": [
+          "query"
+        ],
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "drive_id"
+        ]
+      }
+    },
+    {
+      "id": "docs-read-invoice",
+      "prompt": "Read document inv-2026-0912 and tell me the total.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "docs.get_document",
+        "args": {
+          "document_id": "inv-2026-0912"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "drive_id"
+        ]
+      }
+    },
+    {
+      "id": "crm-vendor-record-parent-entity",
+      "prompt": "Pull up vendor record V-88 in the CRM.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "http_api.get_record",
+        "args": {
+          "entity": "vendors",
+          "record_id": "V-88"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "crm-list-customers",
+      "prompt": "List our customers in the CRM.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "http_api.list_records",
+        "args": {
+          "entity": "customers"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "linear-review-task",
+      "prompt": "Create a Linear task to review the Globex invoice, high priority.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "linear.create_issue",
+        "args": {
+          "team_key": "FIN",
+          "priority": "high"
+        },
+        "required_arg_keys": [
+          "title"
+        ],
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "no-tool-accounting-question",
+      "prompt": "What's the difference between accrual and cash accounting?",
+      "expect": {
+        "tool": null
+      }
+    },
+    {
+      "id": "deny-task-for-read-only",
+      "prompt": "Create a Linear audit task for the September expense report.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "finance-readonly"
+        ],
+        "allowed_tools": [
+          "drive.list_files",
+          "drive.get_file",
+          "docs.get_document",
+          "http_api.list_records",
+          "http_api.get_record"
+        ]
+      },
+      "expect": {
+        "deny": true,
+        "content": {
+          "contains_any": [
+            "denied",
+            "not allowed",
+            "permission",
+            "access",
+            "admin",
+            "not authorized",
+            "unauthorized",
+            "unable",
+            "can't",
+            "cannot",
+            "can not",
+            "couldn't",
+            "could not"
+          ]
+        },
+        "tool": "linear.create_issue"
+      }
+    }
+  ]
+}

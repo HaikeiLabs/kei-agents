@@ -16,7 +16,11 @@ from agents.tool_definitions import (
 
 LINEAR_CREATE_FOLLOWUP_TOOL = ToolDefinition(
     name="linear.create_followup_task",
-    description="Create a Linear follow-up task from an approved, redacted CRM projection",
+    description=(
+        "Create a Linear follow-up task for a CRM lead, by lead id. Call it "
+        "directly when asked for a follow-up on a lead; the summary must not "
+        "contain contact details"
+    ),
     parameters=[
         ToolParameter(
             name="lead_id", description="Governed CRM lead identifier", required=True

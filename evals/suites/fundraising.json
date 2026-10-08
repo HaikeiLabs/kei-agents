@@ -1,0 +1,312 @@
+{
+  "schema": "agentware.eval-suite.v1",
+  "suite": "kei-agents.fundraising",
+  "kind": "agent",
+  "system_prompt": "You run the fundraising workflows (investor outreach, data room sharing, investor decisions). Investors move through the pipeline prospect -> contacted -> meeting -> diligence -> committed, or to passed from any open stage. Every workflow reads before it changes anything.\n\n## Tools\n\n- Investor records in the governed CRM: list the pipeline or search -> `http_api.list_records`; one investor by id -> `http_api.get_record`. Always set `entity` to `investors`. To list investors in one stage, set `filters` to `stage=<stage>`, e.g. `stage=diligence`.\n- The data room in the governed Drive: list its documents -> `drive.list_files`; read one document by id -> `docs.get_document`.\n- Create a Linear follow-up task -> `linear.create_issue` with `team_key` `FUND` (the fundraising team) unless the user names another team, and `labels` including `fundraising`.\n\nCall the one tool for the step the user asks for. You cannot share the data room, change an investor's stage, or email investors yourself; say the harness does those after review, and offer to create the Linear follow-up task instead.\n\nAnswer without a tool for general fundraising questions (terms, stages, how the pipeline works).\n\n## Arguments\n\n- An investor record is a child of the `investors` entity: pass `entity` with every CRM call and `record_id` exactly as given.\n- Never pass tenant, organization, workspace, or drive identifiers; the governed connections already scope the CRM, Drive, and Linear.\n\n## Access\n\nAccess is enforced by Kei policy; you are not told the caller's role. Call the tool the request needs. If a tool result says the call was denied, tell the user it was not allowed and nothing changed. Never claim a task exists or a stage changed unless a tool result says so.\n\nBe brief.\n",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "http_api.list_records",
+        "description": "List records of an entity through the governed http_api/CRM connection",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "entity": {
+              "type": "string",
+              "description": "Entity to list (e.g. leads); defaults to the bound entity"
+            },
+            "filters": {
+              "type": "string",
+              "description": "Query-style filters applied within the governed connection"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of records to return"
+            },
+            "offset": {
+              "type": "integer",
+              "description": "Number of records to skip"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "http_api.get_record",
+        "description": "Read a single record through the governed http_api/CRM connection",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "entity": {
+              "type": "string",
+              "description": "Entity the record belongs to (e.g. leads)"
+            },
+            "record_id": {
+              "type": "string",
+              "description": "Record identifier within the governed connection"
+            }
+          },
+          "required": [
+            "record_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "drive.list_files",
+        "description": "List files in the governed Drive",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search query applied within the governed Drive"
+            },
+            "mime_type": {
+              "type": "string",
+              "description": "Filter by MIME type (e.g. text/plain)"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of files to return"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "docs.get_document",
+        "description": "Read a document's content from the governed Docs workspace",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "Document identifier within the governed Docs workspace"
+            },
+            "plain_text": {
+              "type": "boolean",
+              "description": "Return plain text instead of structured content"
+            }
+          },
+          "required": [
+            "document_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "linear.create_issue",
+        "description": "Create an issue in a team of the governed Linear workspace. Use to track work such as a bug, review, or follow-up task.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "team_key": {
+              "type": "string",
+              "description": "Key of the Linear team that owns the issue (the prefix of its issue keys, e.g. KEI for KEI-123)"
+            },
+            "title": {
+              "type": "string",
+              "description": "Issue title"
+            },
+            "description": {
+              "type": "string",
+              "description": "Issue body in Markdown"
+            },
+            "priority": {
+              "type": "string",
+              "description": "Issue priority",
+              "enum": [
+                "urgent",
+                "high",
+                "medium",
+                "low",
+                "none"
+              ]
+            },
+            "labels": {
+              "type": "string",
+              "description": "Comma-separated label names"
+            }
+          },
+          "required": [
+            "team_key",
+            "title"
+          ]
+        }
+      }
+    }
+  ],
+  "repeats": 1,
+  "cases": [
+    {
+      "id": "pipeline-by-stage",
+      "prompt": "Which investors are in diligence right now?",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "http_api.list_records",
+        "args": {
+          "entity": "investors",
+          "filters": "stage=diligence"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "investor-record-parent-entity",
+      "prompt": "Show me investor record INV-12.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "http_api.get_record",
+        "args": {
+          "entity": "investors",
+          "record_id": "INV-12"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "data-room-list",
+      "prompt": "What documents are in the data room?",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "drive.list_files",
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "drive_id"
+        ]
+      }
+    },
+    {
+      "id": "data-room-read",
+      "prompt": "Read data room document dr-pitch-v3.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "docs.get_document",
+        "args": {
+          "document_id": "dr-pitch-v3"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "drive_id"
+        ]
+      }
+    },
+    {
+      "id": "followup-task",
+      "prompt": "Create a follow-up task to send Sequoia the updated financial model.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "linear.create_issue",
+        "args": {
+          "team_key": "FUND"
+        },
+        "required_arg_keys": [
+          "title"
+        ],
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "no-tool-term-question",
+      "prompt": "What does a pro-rata right mean in a term sheet?",
+      "expect": {
+        "tool": null
+      }
+    },
+    {
+      "id": "deny-task-for-read-only",
+      "prompt": "Create a follow-up task to call Benchmark next week.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "fundraising-readonly"
+        ],
+        "allowed_tools": [
+          "http_api.list_records",
+          "http_api.get_record",
+          "drive.list_files",
+          "docs.get_document"
+        ]
+      },
+      "expect": {
+        "deny": true,
+        "content": {
+          "contains_any": [
+            "denied",
+            "not allowed",
+            "permission",
+            "access",
+            "admin",
+            "not authorized",
+            "unauthorized",
+            "unable",
+            "can't",
+            "cannot",
+            "can not",
+            "couldn't",
+            "could not"
+          ]
+        },
+        "tool": "linear.create_issue"
+      }
+    }
+  ]
+}
