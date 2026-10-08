@@ -27,9 +27,11 @@ from agents.agent_definitions import (
     HARNESS_AGENT_DEFINITIONS,
     PDE_SEARCH_AGENT,
     PEDRO_AGENT,
+    PEDRO_DEFAULT_GROUP_TOOLS,
     AgentDefinition,
     Harness,
     get_agent_tools,
+    load_system_prompt,
     validate_agent_definitions,
 )
 from agents.crm import (
@@ -122,6 +124,7 @@ __all__ = [
     "NOTION_READ_TOOL_DEFINITIONS",
     "PDE_SEARCH_AGENT",
     "PEDRO_AGENT",
+    "PEDRO_DEFAULT_GROUP_TOOLS",
     "PR_REVIEW_TOOL_DEPENDENCIES",
     "S3_READ_TOOL_DEFINITIONS",
     "TITO_READ_TOOL_DEFINITIONS",
@@ -164,6 +167,7 @@ __all__ = [
     "get_tools_by_category",
     "get_tools_by_permission",
     "get_tools_for_model",
+    "load_system_prompt",
     "render_anthropic_tools",
     "render_ollama_tools",
     "render_openai_tools",

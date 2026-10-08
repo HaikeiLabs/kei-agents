@@ -1,0 +1,1486 @@
+{
+  "schema": "agentware.eval-suite.v1",
+  "suite": "kei-agents.pedro",
+  "kind": "agent",
+  "system_prompt": "You are Pedro, the Haikei team's assistant in Discord. You answer questions, file bugs, and work with the team's governed GitHub, Linear, Drive, and CRM data through your tools.\n\n## Access\n\nAccess is enforced by Kei policy, not by you; you are not told the caller's role.\n\n- Everyone, including the `default` group, may use `file_bug`, `search_wiki`, and `web_search`.\n- Every other tool reads or changes governed company data (GitHub, Linear, Drive, CRM, leads) and is for the `admin` group only.\n- Always call the tool the request needs.\n- If a tool result says the call was denied, reply in one or two sentences: say the request was denied because it needs admin access in Pedro, and that nothing was done. You may offer what anyone can do instead (for example, file a bug). Never say the action happened, never show data you did not get, and do not try another tool to get around the denial.\n\n## Choosing a tool\n\nCall at most the one tool that fits the request best, then answer from its result.\n\n- Something in our product is broken, crashing, erroring, or wrong, and the user wants it reported, filed, or tracked -> `file_bug`.\n- What we said, decided, or discussed before; \"what did I ask\", past conversations -> `search_wiki`.\n- Weather, news, prices, releases, current events, anything that needs up-to-date facts from the internet -> `web_search`.\n- List GitHub pull requests -> `list_prs`. List GitHub issues -> `list_issues`.\n- One GitHub issue or pull request by number -> `github.get_issue` / `github.get_pull_request`. Repository details -> `github.get_repository`.\n- CI, build, or workflow status -> `get_workflow_status`.\n- Create a GitHub issue (only when the user explicitly says GitHub issue) -> `create_issue`. Open a pull request -> `create_pull_request`.\n- List or read Linear issues and projects -> `linear.list_issues`, `linear.get_issue`, `linear.list_projects`.\n- Find or read files and documents in the company Drive -> `drive.list_files`, `drive.get_file`, `docs.get_document`.\n- CRM leads: look up one lead -> `crm_lookup_lead`; list leads -> `crm_list_leads`; add a lead -> `crm_create_lead`; change a lead -> `crm_update_lead`.\n- Leads approval workflow (submit, approve, reject a lead, or check its workflow status) -> the `leads_workflow.*` tools.\n- Create a Linear follow-up task for a CRM lead -> `linear.create_followup_task`, called directly with the lead id the user gave. Do not look the lead up first.\n\nAnswer directly, without any tool, for greetings, thanks, small talk, questions about what you can do, and general knowledge or explanations that do not depend on our data or on current events.\n\n## Arguments\n\n- Use the exact argument names in the tool schema, and only those. Use enum values exactly as listed.\n- Never pass tenant, organization, workspace, repository, owner, drive, bucket, or mailbox identifiers. The governed connection already scopes every call to the right tenant, workspace, repository, and drive.\n- A child resource carries its parent: a Linear issue needs `team_key`. Our product team is `KEI`; use another team key only when the user names one.\n- For `file_bug`: `title` is a short summary, `description` is the problem in the user's words, and `severity` is one of `critical` (outage or data loss), `high` (a core feature is broken), `medium` (degraded, workaround exists), `low` (cosmetic). Fill `affected_feature`, `steps_to_reproduce`, and `environment` only from what the user said.\n- Issue and pull request numbers are integers (`#42` -> `42`). Linear issue keys keep their team prefix (`KEI-123`).\n- Do not ask for confirmation before calling a tool; act on the request.\n\n## Style\n\nBe brief and friendly. After a tool call, summarize the result in a few lines. Never invent results.\n",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "file_bug",
+        "description": "Report a bug in our product: starts the bug_to_linear_pr workflow, which files a Linear tracking issue in the given team. Use when a user says something is broken, crashing, or wrong and wants it reported or tracked. Not for feature requests or GitHub issues.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "team_key": {
+              "type": "string",
+              "description": "Key of the Linear team that owns the issue (the prefix of its issue keys, e.g. KEI for KEI-123)"
+            },
+            "title": {
+              "type": "string",
+              "description": "Short bug summary"
+            },
+            "description": {
+              "type": "string",
+              "description": "What is wrong, in the reporter's words"
+            },
+            "severity": {
+              "type": "string",
+              "description": "critical = outage or data loss; high = a core feature is broken; medium = degraded with a workaround; low = cosmetic",
+              "enum": [
+                "critical",
+                "high",
+                "medium",
+                "low"
+              ]
+            },
+            "affected_feature": {
+              "type": "string",
+              "description": "Product area or feature that is broken"
+            },
+            "steps_to_reproduce": {
+              "type": "string",
+              "description": "Steps to reproduce, if the reporter gave them"
+            },
+            "environment": {
+              "type": "string",
+              "description": "Browser, OS, app version, or deployment, if given"
+            }
+          },
+          "required": [
+            "team_key",
+            "title",
+            "description",
+            "severity"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "search_wiki",
+        "description": "Search conversation history",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search query"
+            }
+          },
+          "required": [
+            "query"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "web_search",
+        "description": "Search the web for current info",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search query"
+            }
+          },
+          "required": [
+            "query"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "list_prs",
+        "description": "List GitHub pull requests",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "description": "Filter by PR state",
+              "enum": [
+                "open",
+                "closed",
+                "all"
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of PRs to return"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "list_issues",
+        "description": "List GitHub issues",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "description": "Filter by issue state",
+              "enum": [
+                "open",
+                "closed",
+                "all"
+              ]
+            },
+            "labels": {
+              "type": "string",
+              "description": "Comma-separated list of labels to filter by"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of issues to return"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "create_issue",
+        "description": "Create GitHub issues",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "Issue title"
+            },
+            "body": {
+              "type": "string",
+              "description": "Issue body/description"
+            },
+            "labels": {
+              "type": "string",
+              "description": "Comma-separated list of labels"
+            },
+            "assignee": {
+              "type": "string",
+              "description": "Username to assign the issue to"
+            }
+          },
+          "required": [
+            "title"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_workflow_status",
+        "description": "Get CI/CD workflow status",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "workflow_name": {
+              "type": "string",
+              "description": "Name of the workflow"
+            }
+          },
+          "required": [
+            "workflow_name"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "create_pull_request",
+        "description": "Create PRs",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "PR title"
+            },
+            "body": {
+              "type": "string",
+              "description": "PR body/description"
+            },
+            "head": {
+              "type": "string",
+              "description": "The branch where changes are implemented"
+            },
+            "base": {
+              "type": "string",
+              "description": "The branch the changes should be pulled into"
+            }
+          },
+          "required": [
+            "title",
+            "head"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "github.get_repository",
+        "description": "Read metadata for the governed repository at a given ref",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "ref": {
+              "type": "string",
+              "description": "Branch or tag to inspect; defaults to the default branch"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "github.get_issue",
+        "description": "Read a single issue in the governed repository",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "issue_number": {
+              "type": "integer",
+              "description": "Issue number within the governed repository"
+            }
+          },
+          "required": [
+            "issue_number"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "github.get_pull_request",
+        "description": "Read a single pull request in the governed repository",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "pr_number": {
+              "type": "integer",
+              "description": "Pull request number within the governed repository"
+            }
+          },
+          "required": [
+            "pr_number"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "linear.list_issues",
+        "description": "List issues in the governed Linear workspace",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "description": "Filter by workflow state",
+              "enum": [
+                "backlog",
+                "unstarted",
+                "started",
+                "done",
+                "canceled"
+              ]
+            },
+            "priority": {
+              "type": "string",
+              "description": "Filter by priority",
+              "enum": [
+                "urgent",
+                "high",
+                "medium",
+                "low",
+                "none"
+              ]
+            },
+            "assignee": {
+              "type": "string",
+              "description": "Filter by assignee display name"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of issues to return"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "linear.get_issue",
+        "description": "Read a single issue by its key in the governed Linear workspace",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "issue_key": {
+              "type": "string",
+              "description": "Issue key, e.g. ENG-123"
+            }
+          },
+          "required": [
+            "issue_key"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "linear.list_projects",
+        "description": "List projects in the governed Linear workspace",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "description": "Filter by project state",
+              "enum": [
+                "backlog",
+                "planned",
+                "started",
+                "paused",
+                "completed",
+                "canceled"
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of projects to return"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "drive.list_files",
+        "description": "List files in the governed Drive",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search query applied within the governed Drive"
+            },
+            "mime_type": {
+              "type": "string",
+              "description": "Filter by MIME type (e.g. text/plain)"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of files to return"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "drive.get_file",
+        "description": "Read metadata for a single file in the governed Drive",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "file_id": {
+              "type": "string",
+              "description": "File identifier within the governed Drive"
+            }
+          },
+          "required": [
+            "file_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "docs.get_document",
+        "description": "Read a document's content from the governed Docs workspace",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "Document identifier within the governed Docs workspace"
+            },
+            "plain_text": {
+              "type": "boolean",
+              "description": "Return plain text instead of structured content"
+            }
+          },
+          "required": [
+            "document_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "crm_lookup_lead",
+        "description": "Look up a lead by ID or email address",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "description": "The unique identifier of the lead"
+            },
+            "email": {
+              "type": "string",
+              "description": "The email address of the lead"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "crm_list_leads",
+        "description": "List leads with optional filtering by status",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "description": "Filter by lead status (new, contacted, qualified, proposal, won, lost)",
+              "enum": [
+                "new",
+                "contacted",
+                "qualified",
+                "proposal",
+                "won",
+                "lost"
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of leads to return"
+            },
+            "offset": {
+              "type": "integer",
+              "description": "Number of leads to skip"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "crm_create_lead",
+        "description": "Create a new lead in the CRM",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "description": "Email address of the lead (required)"
+            },
+            "name": {
+              "type": "string",
+              "description": "Full name of the lead (required)"
+            },
+            "company": {
+              "type": "string",
+              "description": "Company name"
+            },
+            "phone": {
+              "type": "string",
+              "description": "Phone number"
+            },
+            "source": {
+              "type": "string",
+              "description": "Lead source",
+              "enum": [
+                "web",
+                "referral",
+                "cold_call",
+                "event",
+                "other"
+              ]
+            },
+            "notes": {
+              "type": "string",
+              "description": "Additional notes about the lead"
+            }
+          },
+          "required": [
+            "email",
+            "name"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "crm_update_lead",
+        "description": "Update an existing lead in the CRM",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "description": "The unique identifier of the lead to update"
+            },
+            "email": {
+              "type": "string",
+              "description": "New email address"
+            },
+            "name": {
+              "type": "string",
+              "description": "New name"
+            },
+            "company": {
+              "type": "string",
+              "description": "New company name"
+            },
+            "phone": {
+              "type": "string",
+              "description": "New phone number"
+            },
+            "status": {
+              "type": "string",
+              "description": "New status",
+              "enum": [
+                "new",
+                "contacted",
+                "qualified",
+                "proposal",
+                "won",
+                "lost"
+              ]
+            },
+            "notes": {
+              "type": "string",
+              "description": "Updated notes"
+            }
+          },
+          "required": [
+            "lead_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "leads_workflow.get_lead",
+        "description": "Get a single lead with its current workflow status and metadata",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "description": "Lead identifier within the governed CRM connection"
+            },
+            "include_approval": {
+              "type": "string",
+              "description": "Include approval metadata in the response"
+            },
+            "include_duplicates": {
+              "type": "string",
+              "description": "Include duplicate-detection information"
+            }
+          },
+          "required": [
+            "lead_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "leads_workflow.list_leads",
+        "description": "List leads with optional workflow-status filter",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "description": "Filter by workflow status",
+              "enum": [
+                "draft",
+                "submitted",
+                "duplicate_review",
+                "pending_approval",
+                "approved",
+                "rejected",
+                "failed",
+                "completed"
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of leads to return"
+            },
+            "offset": {
+              "type": "integer",
+              "description": "Number of leads to skip"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "leads_workflow.create_lead",
+        "description": "Initiate a new lead through the governed CRM workflow",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "description": "Email address of the lead"
+            },
+            "name": {
+              "type": "string",
+              "description": "Full name of the lead"
+            },
+            "company": {
+              "type": "string",
+              "description": "Company name"
+            },
+            "phone": {
+              "type": "string",
+              "description": "Phone number"
+            },
+            "notes": {
+              "type": "string",
+              "description": "Additional notes about the lead"
+            }
+          },
+          "required": [
+            "email",
+            "name"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "leads_workflow.update_lead",
+        "description": "Update lead fields within the governed CRM workflow",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "description": "Lead identifier to update"
+            },
+            "email": {
+              "type": "string",
+              "description": "New email address"
+            },
+            "name": {
+              "type": "string",
+              "description": "New full name"
+            },
+            "company": {
+              "type": "string",
+              "description": "New company name"
+            },
+            "phone": {
+              "type": "string",
+              "description": "New phone number"
+            },
+            "notes": {
+              "type": "string",
+              "description": "Updated notes"
+            }
+          },
+          "required": [
+            "lead_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "leads_workflow.submit_for_approval",
+        "description": "Submit a lead for approval review",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "description": "Lead identifier to submit for approval"
+            },
+            "notes": {
+              "type": "string",
+              "description": "Context or justification for the approval request"
+            }
+          },
+          "required": [
+            "lead_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "leads_workflow.approve_lead",
+        "description": "Approve a lead that is pending approval",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "description": "Lead identifier to approve"
+            },
+            "approval_note": {
+              "type": "string",
+              "description": "Optional note attached to the approval"
+            }
+          },
+          "required": [
+            "lead_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "leads_workflow.reject_lead",
+        "description": "Reject a lead that is pending approval",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "description": "Lead identifier to reject"
+            },
+            "reason": {
+              "type": "string",
+              "description": "Reason for rejection"
+            }
+          },
+          "required": [
+            "lead_id",
+            "reason"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "linear.create_followup_task",
+        "description": "Create a Linear follow-up task for a CRM lead, by lead id. Call it directly when asked for a follow-up on a lead; the summary must not contain contact details",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "description": "Governed CRM lead identifier"
+            },
+            "title": {
+              "type": "string",
+              "description": "Follow-up task title"
+            },
+            "summary": {
+              "type": "string",
+              "description": "Redacted CRM context approved for sharing"
+            },
+            "approval_id": {
+              "type": "string",
+              "description": "Approval reference for the write"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "description": "Stable replay key for this task creation"
+            }
+          },
+          "required": [
+            "lead_id",
+            "title",
+            "summary",
+            "idempotency_key"
+          ]
+        }
+      }
+    }
+  ],
+  "repeats": 1,
+  "cases": [
+    {
+      "id": "file-bug-basic",
+      "prompt": "The login page crashes with a 500 error when I click 'Sign in with Google'. Can you file a bug?",
+      "context": {
+        "role": "member",
+        "groups": [
+          "default"
+        ],
+        "allowed_tools": [
+          "file_bug",
+          "search_wiki",
+          "web_search"
+        ]
+      },
+      "expect": {
+        "tool": "file_bug",
+        "args": {
+          "team_key": "KEI"
+        },
+        "required_arg_keys": [
+          "title",
+          "description",
+          "severity"
+        ],
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "file-bug-named-team-critical",
+      "prompt": "File a bug for the OPS team: the nightly database backup job has been failing silently since Monday, so we may have lost data.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "default"
+        ],
+        "allowed_tools": [
+          "file_bug",
+          "search_wiki",
+          "web_search"
+        ]
+      },
+      "expect": {
+        "tool": "file_bug",
+        "args": {
+          "team_key": "OPS",
+          "severity": "critical"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "file-bug-cosmetic-low",
+      "prompt": "Tiny thing: the footer logo on the pricing page is a few pixels off-center. Please report it.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "default"
+        ],
+        "allowed_tools": [
+          "file_bug",
+          "search_wiki",
+          "web_search"
+        ]
+      },
+      "expect": {
+        "tool": "file_bug",
+        "args": {
+          "team_key": "KEI",
+          "severity": "low"
+        }
+      }
+    },
+    {
+      "id": "file-bug-not-github-issue",
+      "prompt": "The Slack integration stopped posting messages after yesterday's deploy. Report this bug please.",
+      "context": {
+        "role": "admin",
+        "groups": [
+          "admin"
+        ]
+      },
+      "expect": {
+        "tool": "file_bug",
+        "args": {
+          "team_key": "KEI"
+        },
+        "forbidden_tools": [
+          "create_issue",
+          "linear.create_followup_task"
+        ]
+      }
+    },
+    {
+      "id": "search-wiki-past-decision",
+      "prompt": "What did we decide last week about the pricing tiers?",
+      "context": {
+        "role": "member",
+        "groups": [
+          "default"
+        ],
+        "allowed_tools": [
+          "file_bug",
+          "search_wiki",
+          "web_search"
+        ]
+      },
+      "expect": {
+        "tool": "search_wiki",
+        "required_arg_keys": [
+          "query"
+        ]
+      }
+    },
+    {
+      "id": "search-wiki-what-did-i-ask",
+      "prompt": "What did I ask you yesterday about the deploy?",
+      "context": {
+        "role": "member",
+        "groups": [
+          "default"
+        ],
+        "allowed_tools": [
+          "file_bug",
+          "search_wiki",
+          "web_search"
+        ]
+      },
+      "expect": {
+        "tool": "search_wiki",
+        "required_arg_keys": [
+          "query"
+        ]
+      }
+    },
+    {
+      "id": "web-search-weather",
+      "prompt": "What's the weather in Salt Lake City today?",
+      "context": {
+        "role": "member",
+        "groups": [
+          "default"
+        ],
+        "allowed_tools": [
+          "file_bug",
+          "search_wiki",
+          "web_search"
+        ]
+      },
+      "expect": {
+        "tool": "web_search",
+        "required_arg_keys": [
+          "query"
+        ]
+      }
+    },
+    {
+      "id": "web-search-news",
+      "prompt": "Any news today about the Kubernetes 2.0 release?",
+      "context": {
+        "role": "member",
+        "groups": [
+          "default"
+        ],
+        "allowed_tools": [
+          "file_bug",
+          "search_wiki",
+          "web_search"
+        ]
+      },
+      "expect": {
+        "tool": "web_search",
+        "required_arg_keys": [
+          "query"
+        ],
+        "forbidden_tools": [
+          "search_wiki"
+        ]
+      }
+    },
+    {
+      "id": "no-tool-thanks",
+      "prompt": "hey pedro, thanks for the help earlier!",
+      "expect": {
+        "tool": null
+      }
+    },
+    {
+      "id": "no-tool-capabilities",
+      "prompt": "What kinds of things can you help me with?",
+      "expect": {
+        "tool": null
+      }
+    },
+    {
+      "id": "no-tool-general-knowledge",
+      "prompt": "Explain the difference between git merge and git rebase in two sentences.",
+      "expect": {
+        "tool": null
+      }
+    },
+    {
+      "id": "admin-list-prs",
+      "prompt": "Show me the open pull requests.",
+      "context": {
+        "role": "admin",
+        "groups": [
+          "admin"
+        ]
+      },
+      "expect": {
+        "tool": "list_prs",
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "admin-get-pr-by-number",
+      "prompt": "What's in PR #42?",
+      "context": {
+        "role": "admin",
+        "groups": [
+          "admin"
+        ]
+      },
+      "expect": {
+        "tool": "github.get_pull_request",
+        "args": {
+          "pr_number": 42
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "admin-get-pr-other-repo",
+      "prompt": "Pull up pull request 7 in the soypete/kei-website repo.",
+      "context": {
+        "role": "admin",
+        "groups": [
+          "admin"
+        ]
+      },
+      "expect": {
+        "tool": "github.get_pull_request",
+        "args": {
+          "pr_number": 7
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner",
+          "repo"
+        ]
+      }
+    },
+    {
+      "id": "admin-get-github-issue",
+      "prompt": "Pull up GitHub issue 17 for me.",
+      "context": {
+        "role": "admin",
+        "groups": [
+          "admin"
+        ]
+      },
+      "expect": {
+        "tool": "github.get_issue",
+        "args": {
+          "issue_number": 17
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "admin-ci-status",
+      "prompt": "Is the deploy workflow passing in CI right now?",
+      "context": {
+        "role": "admin",
+        "groups": [
+          "admin"
+        ]
+      },
+      "expect": {
+        "tool": "get_workflow_status",
+        "required_arg_keys": [
+          "workflow_name"
+        ]
+      }
+    },
+    {
+      "id": "admin-linear-issue-key",
+      "prompt": "What's the status of KEI-123?",
+      "context": {
+        "role": "admin",
+        "groups": [
+          "admin"
+        ]
+      },
+      "expect": {
+        "tool": "linear.get_issue",
+        "args": {
+          "issue_key": "KEI-123"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "admin-linear-urgent",
+      "prompt": "List the urgent Linear issues.",
+      "context": {
+        "role": "admin",
+        "groups": [
+          "admin"
+        ]
+      },
+      "expect": {
+        "tool": "linear.list_issues",
+        "args": {
+          "priority": "urgent"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "admin-drive-search",
+      "prompt": "Find the Q3 board deck in our Drive.",
+      "context": {
+        "role": "admin",
+        "groups": [
+          "admin"
+        ]
+      },
+      "expect": {
+        "tool": "drive.list_files",
+        "required_arg_keys": [
+          "query"
+        ],
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "drive_id"
+        ]
+      }
+    },
+    {
+      "id": "admin-crm-lookup-email",
+      "prompt": "Look up the lead with email jane@acme.io in the CRM.",
+      "context": {
+        "role": "admin",
+        "groups": [
+          "admin"
+        ]
+      },
+      "expect": {
+        "tool": "crm_lookup_lead",
+        "args": {
+          "email": "jane@acme.io"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "admin-crm-list-qualified",
+      "prompt": "List all qualified leads in the CRM.",
+      "context": {
+        "role": "admin",
+        "groups": [
+          "admin"
+        ]
+      },
+      "expect": {
+        "tool": "crm_list_leads",
+        "args": {
+          "status": "qualified"
+        }
+      }
+    },
+    {
+      "id": "admin-followup-task-parent-lead",
+      "prompt": "Create a Linear follow-up task for lead L-204 to schedule a product demo.",
+      "context": {
+        "role": "admin",
+        "groups": [
+          "admin"
+        ]
+      },
+      "expect": {
+        "tool": "linear.create_followup_task",
+        "args": {
+          "lead_id": "L-204"
+        },
+        "required_arg_keys": [
+          "title",
+          "summary",
+          "idempotency_key"
+        ],
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "admin-approve-lead",
+      "prompt": "Approve lead L-77 in the leads workflow.",
+      "context": {
+        "role": "admin",
+        "groups": [
+          "admin"
+        ]
+      },
+      "expect": {
+        "tool": "leads_workflow.approve_lead",
+        "args": {
+          "lead_id": "L-77"
+        }
+      }
+    },
+    {
+      "id": "deny-member-list-leads",
+      "prompt": "List all the leads in the CRM.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "default"
+        ],
+        "allowed_tools": [
+          "file_bug",
+          "search_wiki",
+          "web_search"
+        ]
+      },
+      "expect": {
+        "deny": true,
+        "content": {
+          "contains_any": [
+            "denied",
+            "not allowed",
+            "permission",
+            "access",
+            "admin",
+            "not authorized",
+            "unauthorized",
+            "unable",
+            "can't",
+            "cannot",
+            "can not",
+            "couldn't",
+            "could not"
+          ]
+        }
+      }
+    },
+    {
+      "id": "deny-member-open-pr",
+      "prompt": "Open a pull request from branch fix/login-crash into main.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "default"
+        ],
+        "allowed_tools": [
+          "file_bug",
+          "search_wiki",
+          "web_search"
+        ]
+      },
+      "expect": {
+        "deny": true,
+        "content": {
+          "contains_any": [
+            "denied",
+            "not allowed",
+            "permission",
+            "access",
+            "admin",
+            "not authorized",
+            "unauthorized",
+            "unable",
+            "can't",
+            "cannot",
+            "can not",
+            "couldn't",
+            "could not"
+          ]
+        },
+        "tool": "create_pull_request",
+        "args": {
+          "head": "fix/login-crash"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "deny-member-drive",
+      "prompt": "Find the payroll spreadsheet in Drive.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "default"
+        ],
+        "allowed_tools": [
+          "file_bug",
+          "search_wiki",
+          "web_search"
+        ]
+      },
+      "expect": {
+        "deny": true,
+        "content": {
+          "not_contains": [
+            "payroll.xlsx"
+          ],
+          "contains_any": [
+            "denied",
+            "not allowed",
+            "permission",
+            "access",
+            "admin",
+            "not authorized",
+            "unauthorized",
+            "unable",
+            "can't",
+            "cannot",
+            "can not",
+            "couldn't",
+            "could not"
+          ]
+        },
+        "tool": "drive.list_files"
+      }
+    },
+    {
+      "id": "deny-member-linear-read",
+      "prompt": "What's the status of Linear issue KEI-88?",
+      "context": {
+        "role": "member",
+        "groups": [
+          "default"
+        ],
+        "allowed_tools": [
+          "file_bug",
+          "search_wiki",
+          "web_search"
+        ]
+      },
+      "expect": {
+        "deny": true,
+        "content": {
+          "contains_any": [
+            "denied",
+            "not allowed",
+            "permission",
+            "access",
+            "admin",
+            "not authorized",
+            "unauthorized",
+            "unable",
+            "can't",
+            "cannot",
+            "can not",
+            "couldn't",
+            "could not"
+          ]
+        },
+        "tool": "linear.get_issue",
+        "args": {
+          "issue_key": "KEI-88"
+        }
+      }
+    }
+  ]
+}

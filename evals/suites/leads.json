@@ -1,0 +1,375 @@
+{
+  "schema": "agentware.eval-suite.v1",
+  "suite": "kei-agents.leads",
+  "kind": "agent",
+  "system_prompt": "You run the leads workflow in the governed CRM. A lead moves through draft -> submitted -> (duplicate_review) -> pending_approval -> approved or rejected -> completed; failed marks an error.\n\n## Tools\n\n- One lead and its workflow status -> `leads_workflow.get_lead` with `lead_id`.\n- List leads, optionally by workflow `status` -> `leads_workflow.list_leads`.\n- Add a new lead -> `leads_workflow.create_lead` with `email` and `name` (plus `company`, `phone`, `notes` when given).\n- Change a lead's fields -> `leads_workflow.update_lead` with `lead_id` and only the fields that change.\n- Submit a lead for approval -> `leads_workflow.submit_for_approval`.\n- Approve a pending lead -> `leads_workflow.approve_lead`. Reject one -> `leads_workflow.reject_lead` with a `reason`.\n\nCall the one tool that matches the request. Answer without a tool for general sales questions and questions about how the workflow works.\n\n## Arguments\n\n- Every change to an existing lead is a child of that lead: pass its `lead_id` exactly as given.\n- Use `status` values exactly as listed: draft, submitted, duplicate_review, pending_approval, approved, rejected, failed, completed.\n- Never pass tenant, organization, or workspace identifiers; the governed connection already scopes the CRM.\n\n## Access\n\nAccess is enforced by Kei policy; you are not told the caller's role. Call the tool the request needs. If a tool result says the call was denied, tell the user it was not allowed and nothing changed. Never claim a lead was created, approved, or rejected unless a tool result says so.\n\nBe brief.\n",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "leads_workflow.get_lead",
+        "description": "Get a single lead with its current workflow status and metadata",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "description": "Lead identifier within the governed CRM connection"
+            },
+            "include_approval": {
+              "type": "string",
+              "description": "Include approval metadata in the response"
+            },
+            "include_duplicates": {
+              "type": "string",
+              "description": "Include duplicate-detection information"
+            }
+          },
+          "required": [
+            "lead_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "leads_workflow.list_leads",
+        "description": "List leads with optional workflow-status filter",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "description": "Filter by workflow status",
+              "enum": [
+                "draft",
+                "submitted",
+                "duplicate_review",
+                "pending_approval",
+                "approved",
+                "rejected",
+                "failed",
+                "completed"
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of leads to return"
+            },
+            "offset": {
+              "type": "integer",
+              "description": "Number of leads to skip"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "leads_workflow.create_lead",
+        "description": "Initiate a new lead through the governed CRM workflow",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "description": "Email address of the lead"
+            },
+            "name": {
+              "type": "string",
+              "description": "Full name of the lead"
+            },
+            "company": {
+              "type": "string",
+              "description": "Company name"
+            },
+            "phone": {
+              "type": "string",
+              "description": "Phone number"
+            },
+            "notes": {
+              "type": "string",
+              "description": "Additional notes about the lead"
+            }
+          },
+          "required": [
+            "email",
+            "name"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "leads_workflow.update_lead",
+        "description": "Update lead fields within the governed CRM workflow",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "description": "Lead identifier to update"
+            },
+            "email": {
+              "type": "string",
+              "description": "New email address"
+            },
+            "name": {
+              "type": "string",
+              "description": "New full name"
+            },
+            "company": {
+              "type": "string",
+              "description": "New company name"
+            },
+            "phone": {
+              "type": "string",
+              "description": "New phone number"
+            },
+            "notes": {
+              "type": "string",
+              "description": "Updated notes"
+            }
+          },
+          "required": [
+            "lead_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "leads_workflow.submit_for_approval",
+        "description": "Submit a lead for approval review",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "description": "Lead identifier to submit for approval"
+            },
+            "notes": {
+              "type": "string",
+              "description": "Context or justification for the approval request"
+            }
+          },
+          "required": [
+            "lead_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "leads_workflow.approve_lead",
+        "description": "Approve a lead that is pending approval",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "description": "Lead identifier to approve"
+            },
+            "approval_note": {
+              "type": "string",
+              "description": "Optional note attached to the approval"
+            }
+          },
+          "required": [
+            "lead_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "leads_workflow.reject_lead",
+        "description": "Reject a lead that is pending approval",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "description": "Lead identifier to reject"
+            },
+            "reason": {
+              "type": "string",
+              "description": "Reason for rejection"
+            }
+          },
+          "required": [
+            "lead_id",
+            "reason"
+          ]
+        }
+      }
+    }
+  ],
+  "repeats": 1,
+  "cases": [
+    {
+      "id": "get-lead-status",
+      "prompt": "What's the workflow status of lead L-300?",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "leads_workflow.get_lead",
+        "args": {
+          "lead_id": "L-300"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "list-pending-approval",
+      "prompt": "Which leads are pending approval?",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "leads_workflow.list_leads",
+        "args": {
+          "status": "pending_approval"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "create-lead",
+      "prompt": "Add a new lead: Dana Park, dana@initech.com, from Initech.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "leads_workflow.create_lead",
+        "args": {
+          "email": "dana@initech.com",
+          "name": "Dana Park",
+          "company": "Initech"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "submit-for-approval",
+      "prompt": "Submit lead L-300 for approval.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "leads_workflow.submit_for_approval",
+        "args": {
+          "lead_id": "L-300"
+        }
+      }
+    },
+    {
+      "id": "reject-with-reason",
+      "prompt": "Reject lead L-301, they're a competitor.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "leads_workflow.reject_lead",
+        "args": {
+          "lead_id": "L-301"
+        },
+        "required_arg_keys": [
+          "reason"
+        ],
+        "forbidden_tools": [
+          "leads_workflow.approve_lead"
+        ]
+      }
+    },
+    {
+      "id": "no-tool-sales-question",
+      "prompt": "What's a good way to qualify a lead?",
+      "expect": {
+        "tool": null
+      }
+    },
+    {
+      "id": "deny-approve-for-read-only",
+      "prompt": "Approve lead L-300.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "default"
+        ],
+        "allowed_tools": [
+          "leads_workflow.get_lead",
+          "leads_workflow.list_leads"
+        ]
+      },
+      "expect": {
+        "deny": true,
+        "content": {
+          "contains_any": [
+            "denied",
+            "not allowed",
+            "permission",
+            "access",
+            "admin",
+            "not authorized",
+            "unauthorized",
+            "unable",
+            "can't",
+            "cannot",
+            "can not",
+            "couldn't",
+            "could not"
+          ]
+        },
+        "tool": "leads_workflow.approve_lead",
+        "args": {
+          "lead_id": "L-300"
+        }
+      }
+    }
+  ]
+}

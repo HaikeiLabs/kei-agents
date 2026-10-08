@@ -22,6 +22,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
+from agents.tool_definitions import (
+    Permission,
+    ToolCategory,
+    ToolDefinition,
+    ToolParameter,
+)
+
 # ── Step data types ──────────────────────────────────────────────────────────
 
 
@@ -272,8 +279,115 @@ def _reachable_steps(spec: WorkflowSpec) -> set[str]:
     return visited
 
 
+# ── Action tools ─────────────────────────────────────────────────────────────
+#
+# Linear writes are agent action tools, never governed connector capabilities:
+# they declare no binding and no handler. The harness translates a call to a
+# tenant-side proxy invocation. The Linear workspace is proxy-delegated; the
+# team is the parent of an issue, so it is an argument (semantics rule).
+
+_TEAM_KEY = ToolParameter(
+    name="team_key",
+    description=(
+        "Key of the Linear team that owns the issue (the prefix of its issue "
+        "keys, e.g. KEI for KEI-123)"
+    ),
+    required=True,
+)
+
+LINEAR_PRIORITIES = ["urgent", "high", "medium", "low", "none"]
+
+FILE_BUG_TOOL = ToolDefinition(
+    name="file_bug",
+    description=(
+        "Report a bug in our product: starts the bug_to_linear_pr workflow, "
+        "which files a Linear tracking issue in the given team. Use when a user "
+        "says something is broken, crashing, or wrong and wants it reported or "
+        "tracked. Not for feature requests or GitHub issues."
+    ),
+    parameters=[
+        _TEAM_KEY,
+        ToolParameter(name="title", description="Short bug summary", required=True),
+        ToolParameter(
+            name="description",
+            description="What is wrong, in the reporter's words",
+            required=True,
+        ),
+        ToolParameter(
+            name="severity",
+            description=(
+                "critical = outage or data loss; high = a core feature is broken; "
+                "medium = degraded with a workaround; low = cosmetic"
+            ),
+            required=True,
+            enum=[s.value for s in Severity],
+        ),
+        ToolParameter(
+            name="affected_feature",
+            description="Product area or feature that is broken",
+            required=False,
+        ),
+        ToolParameter(
+            name="steps_to_reproduce",
+            description="Steps to reproduce, if the reporter gave them",
+            required=False,
+        ),
+        ToolParameter(
+            name="environment",
+            description="Browser, OS, app version, or deployment, if given",
+            required=False,
+        ),
+    ],
+    permission=Permission.LINEAR_WRITE,
+    category=ToolCategory.LINEAR,
+    service="linear",
+    tags=["linear-write", "governed-action", "bug-to-linear-pr"],
+)
+
+LINEAR_CREATE_ISSUE_TOOL = ToolDefinition(
+    name="linear.create_issue",
+    description=(
+        "Create an issue in a team of the governed Linear workspace. Use to "
+        "track work such as a bug, review, or follow-up task."
+    ),
+    parameters=[
+        _TEAM_KEY,
+        ToolParameter(name="title", description="Issue title", required=True),
+        ToolParameter(
+            name="description",
+            description="Issue body in Markdown",
+            required=False,
+        ),
+        ToolParameter(
+            name="priority",
+            description="Issue priority",
+            required=False,
+            enum=LINEAR_PRIORITIES,
+        ),
+        ToolParameter(
+            name="labels",
+            description="Comma-separated label names",
+            required=False,
+        ),
+    ],
+    permission=Permission.LINEAR_WRITE,
+    category=ToolCategory.LINEAR,
+    service="linear",
+    tags=["linear-write", "governed-action"],
+)
+
+BUG_TO_LINEAR_PR_TOOL_DEFINITIONS: list[ToolDefinition] = [
+    FILE_BUG_TOOL,
+    LINEAR_CREATE_ISSUE_TOOL,
+]
+
+
 __all__ = [
     "BUG_TO_LINEAR_PR",
+    "BUG_TO_LINEAR_PR_TOOL_DEFINITIONS",
+    "FILE_BUG_TOOL",
+    "LINEAR_CREATE_ISSUE_TOOL",
+    "LINEAR_PRIORITIES",
     "BugReport",
     "ConnectorRef",
     "LinearTicketRef",

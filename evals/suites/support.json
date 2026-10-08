@@ -1,0 +1,273 @@
+{
+  "schema": "agentware.eval-suite.v1",
+  "suite": "kei-agents.support",
+  "kind": "agent",
+  "system_prompt": "You run the support workflow: read support tickets from the governed Notion workspace, customer documents from the governed Drive, and customer account records from the governed CRM, then help the support team triage and resolve tickets. You only read; ticket updates and escalations are done by the harness after review.\n\n## Tools\n\n- Find tickets by keyword -> `notion.list_pages` with the words in `query`. Read one ticket page by id -> `notion.get_page` with `page_id`.\n- Find customer documents (contracts, onboarding docs) -> `drive.list_files` with `query`. Read one document by id -> `docs.get_document`.\n- Read a customer account (billing tier, plan, contacts) -> `http_api.get_record` with `entity` `accounts` and the `record_id`.\n\nCall the one tool that matches the request. Answer without a tool for general support questions and questions about how the workflow works.\n\nEscalation rules: critical tickets go to the support lead; tickets more than 30 minutes past SLA go to engineering; open enterprise tickets get a dedicated engineer. When you mention a ticket, apply these rules and say who it goes to.\n\nNever repeat email addresses, phone numbers, SSNs, or card numbers from tickets or accounts; write [REDACTED] instead.\n\n## Arguments\n\n- An account record is a child of the `accounts` entity: pass `entity` and `record_id` together.\n- Never pass tenant, organization, workspace, or drive identifiers; the governed connections already scope Notion, Drive, and the CRM.\n\n## Access\n\nAccess is enforced by Kei policy; you are not told the caller's role. Call the tool the request needs. If a tool result says the call was denied, tell the user they do not have access to that source. Never invent ticket or account details.\n\nBe brief.\n",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "notion.list_pages",
+        "description": "Search or list pages in the governed Notion workspace",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search query applied within the governed workspace"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of pages to return"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "notion.get_page",
+        "description": "Read a single page from the governed Notion workspace",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "page_id": {
+              "type": "string",
+              "description": "Page identifier within the governed workspace"
+            }
+          },
+          "required": [
+            "page_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "drive.list_files",
+        "description": "List files in the governed Drive",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search query applied within the governed Drive"
+            },
+            "mime_type": {
+              "type": "string",
+              "description": "Filter by MIME type (e.g. text/plain)"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of files to return"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "docs.get_document",
+        "description": "Read a document's content from the governed Docs workspace",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "Document identifier within the governed Docs workspace"
+            },
+            "plain_text": {
+              "type": "boolean",
+              "description": "Return plain text instead of structured content"
+            }
+          },
+          "required": [
+            "document_id"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "http_api.get_record",
+        "description": "Read a single record through the governed http_api/CRM connection",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "entity": {
+              "type": "string",
+              "description": "Entity the record belongs to (e.g. leads)"
+            },
+            "record_id": {
+              "type": "string",
+              "description": "Record identifier within the governed connection"
+            }
+          },
+          "required": [
+            "record_id"
+          ]
+        }
+      }
+    }
+  ],
+  "repeats": 1,
+  "cases": [
+    {
+      "id": "search-tickets",
+      "prompt": "Find support tickets about login failures.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "notion.list_pages",
+        "required_arg_keys": [
+          "query"
+        ],
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "read-ticket-page",
+      "prompt": "Open ticket page pg-4411.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "notion.get_page",
+        "args": {
+          "page_id": "pg-4411"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "account-record-parent-entity",
+      "prompt": "What plan is customer account ACC-77 on?",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "http_api.get_record",
+        "args": {
+          "entity": "accounts",
+          "record_id": "ACC-77"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "org_id",
+          "workspace",
+          "workspace_id",
+          "repository",
+          "owner"
+        ]
+      }
+    },
+    {
+      "id": "find-contract",
+      "prompt": "Find the Initech contract in Drive.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "drive.list_files",
+        "required_arg_keys": [
+          "query"
+        ],
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "drive_id"
+        ]
+      }
+    },
+    {
+      "id": "no-tool-escalation-rule",
+      "prompt": "A critical ticket just came in. Who should it be escalated to?",
+      "expect": {
+        "tool": null,
+        "content": {
+          "contains_any": [
+            "support lead"
+          ]
+        }
+      }
+    },
+    {
+      "id": "no-tool-support-advice",
+      "prompt": "How should I word an apology for a delayed response?",
+      "expect": {
+        "tool": null
+      }
+    },
+    {
+      "id": "deny-account-for-notion-only",
+      "prompt": "What plan is customer account ACC-9 on?",
+      "context": {
+        "role": "member",
+        "groups": [
+          "support-tier1"
+        ],
+        "allowed_tools": [
+          "notion.list_pages",
+          "notion.get_page"
+        ]
+      },
+      "expect": {
+        "deny": true,
+        "content": {
+          "contains_any": [
+            "denied",
+            "not allowed",
+            "permission",
+            "access",
+            "admin",
+            "not authorized",
+            "unauthorized",
+            "unable",
+            "can't",
+            "cannot",
+            "can not",
+            "couldn't",
+            "could not"
+          ]
+        },
+        "tool": "http_api.get_record",
+        "args": {
+          "entity": "accounts",
+          "record_id": "ACC-9"
+        }
+      }
+    }
+  ]
+}

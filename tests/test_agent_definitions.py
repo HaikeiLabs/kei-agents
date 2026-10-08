@@ -9,10 +9,12 @@ from agents import (
     HARNESS_AGENT_DEFINITIONS,
     PDE_SEARCH_AGENT,
     PEDRO_AGENT,
+    PEDRO_DEFAULT_GROUP_TOOLS,
     AgentDefinition,
     Harness,
     Permission,
     get_agent_tools,
+    load_system_prompt,
     validate_agent_definitions,
     validate_tool_definitions,
 )
@@ -83,11 +85,22 @@ class TestHarnessAgents:
                 P.FUNDRAISING_WRITE,
                 P.FINANCE_READ,
                 P.FINANCE_WRITE,
+                P.SEARCH_WIKI,
+                P.WEB_SEARCH,
             }
         )
 
     def test_pedro_has_linear_followup_action(self) -> None:
         assert "linear.create_followup_task" in PEDRO_AGENT.tools
+
+    def test_pedro_default_group_tools_come_first(self) -> None:
+        assert PEDRO_DEFAULT_GROUP_TOOLS == ("file_bug", "search_wiki", "web_search")
+        assert PEDRO_AGENT.tools[:3] == PEDRO_DEFAULT_GROUP_TOOLS
+
+    def test_pedro_files_bugs_through_the_workflow_entry(self) -> None:
+        # linear.create_issue is the workflow's own step, not a Pedro tool.
+        assert "linear.create_issue" not in PEDRO_AGENT.tools
+        assert len(set(PEDRO_AGENT.tools)) == len(PEDRO_AGENT.tools)
 
     def test_get_agent_tools_uses_catalog(self) -> None:
         tools = get_agent_tools(PEDRO_AGENT)
@@ -149,3 +162,48 @@ class TestValidateAgentDefinitions:
     def test_duplicate_tool_rejected(self) -> None:
         bad = _agent(tools=("drive.list_files", "drive.list_files"))
         assert any("duplicate tool" in v for v in validate_agent_definitions([bad]))
+
+
+class TestSystemPrompt:
+    def test_prompt_fields_default_to_none(self) -> None:
+        # Back-compatible: definitions written before the fields existed.
+        agent = _agent()
+        assert agent.system_prompt is None
+        assert agent.system_prompt_file is None
+        assert load_system_prompt(agent) is None
+        assert validate_agent_definitions([agent]) == []
+
+    def test_positional_construction_still_works(self) -> None:
+        agent = AgentDefinition(
+            "probe",
+            Harness.PDE,
+            "probe agent",
+            frozenset({P.DRIVE_READ}),
+            ("drive.list_files",),
+        )
+        assert load_system_prompt(agent) is None
+
+    def test_inline_prompt(self) -> None:
+        agent = _agent(system_prompt="You are a probe.")
+        assert load_system_prompt(agent) == "You are a probe."
+        assert validate_agent_definitions([agent]) == []
+
+    def test_prompt_file_is_packaged(self) -> None:
+        for agent in HARNESS_AGENT_DEFINITIONS:
+            prompt = load_system_prompt(agent)
+            assert prompt is not None and prompt.strip()
+
+    def test_both_sources_rejected(self) -> None:
+        agent = _agent(system_prompt="x", system_prompt_file="prompts/pedro.md")
+        assert any("not both" in v for v in validate_agent_definitions([agent]))
+
+    @pytest.mark.parametrize(
+        "path", ["prompts/missing.md", "../pyproject.toml", "/etc/hosts"]
+    )
+    def test_bad_prompt_file_rejected(self, path: str) -> None:
+        agent = _agent(system_prompt_file=path)
+        assert any(
+            "system_prompt_file" in v for v in validate_agent_definitions([agent])
+        )
+        with pytest.raises(ValueError):
+            load_system_prompt(agent)
