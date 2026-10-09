@@ -31,7 +31,15 @@ README_TOOLS: list[tuple[str, str, Permission]] = [
     ("list_issues", "List GitHub issues", Permission.GITHUB_READ),
     ("create_issue", "Create GitHub issues", Permission.GITHUB_WRITE),
     ("get_workflow_status", "Get CI/CD workflow status", Permission.GITHUB_READ),
-    ("create_pull_request", "Create PRs", Permission.GITHUB_WRITE),
+    (
+        "create_pull_request",
+        (
+            "Open a GitHub pull request from an existing branch. Use it when the"
+            " user says the work is on a branch and asks for a PR; call it"
+            " directly, without reading the linked issue first"
+        ),
+        Permission.GITHUB_WRITE,
+    ),
     ("start_game", "Start interactive games", Permission.SEARCH_WIKI),
 ]
 

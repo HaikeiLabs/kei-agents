@@ -17,7 +17,7 @@ Call at most the one tool that fits the request best, then answer from its resul
 - What we said, decided, or discussed before; "what did I ask", past conversations -> `search_wiki`.
 - Weather, news, prices, releases, current events, anything that needs up-to-date facts from the internet -> `web_search`.
 - List GitHub pull requests -> `list_prs`. List GitHub issues -> `list_issues`.
-- One GitHub issue or pull request by number -> `github.get_issue` / `github.get_pull_request`. Repository details -> `github.get_repository`.
+- One GitHub issue or pull request by number -> `github.get_issue` / `github.get_pull_request`, called first even when the user names a repository; do not check the repository with `github.get_repository` first. Repository details -> `github.get_repository`.
 - CI, build, or workflow status -> `get_workflow_status`.
 - Create a GitHub issue (only when the user explicitly says GitHub issue) -> `create_issue`. Open a pull request -> `create_pull_request`.
 - List or read Linear issues and projects -> `linear.list_issues`, `linear.get_issue`, `linear.list_projects`.

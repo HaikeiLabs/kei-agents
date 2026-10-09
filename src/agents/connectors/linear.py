@@ -58,7 +58,11 @@ LINEAR_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="linear.get_issue",
-        description="Read a single issue by its key in the governed Linear workspace",
+        description=(
+            "Read a single issue by its key in the governed Linear workspace."
+            " Use it when the user asks about an issue (status, details); do not"
+            " call it just because a request mentions an issue key"
+        ),
         parameters=[
             ToolParameter(
                 name="issue_key",
