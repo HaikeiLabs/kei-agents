@@ -3,21 +3,264 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Add a Discord tool that reads a CRM lead and creates a Linear follow-up task with approval.",
+      "prompt": "Add a Discord tool that reads a CRM lead and creates a Linear follow-up task with approval.\n\nDo not execute anything — just explain in text.",
       "expected_output": "A plan or implementation that routes both operations through the tenant-side proxy, derives scope from the harness key, redacts CRM fields, requires consent and approval, and tests idempotency and audit redaction.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "Both operations are routed through the tenant-side governed proxy invocation, not a direct provider client in the harness.",
+        "Scope (tenant/org/workspace) is resolved from the authenticated harness key/proxy context, never accepted from the model.",
+        "CRM fields projected to Linear are allowlisted, with contact data, notes, and secrets redacted by default.",
+        "The Linear write requires an approval reference and the CRM projection requires explicit consent.",
+        "The plan uses a deterministic idempotency key for the write.",
+        "The plan emits audit metadata (subject, decision, digests) rather than provider payloads or credentials."
+      ],
+      "checks": [
+        {
+          "text": "Both operations are routed through the tenant-side governed proxy invocation, not a direct provider client in the harness.",
+          "contains_any": [
+            "governed invocation",
+            "proxy command",
+            "through the proxy",
+            "tenant-side proxy",
+            "via the proxy",
+            "governed proxy",
+            "proxy pep"
+          ]
+        },
+        {
+          "text": "Scope (tenant/org/workspace) is resolved from the authenticated harness key/proxy context, never accepted from the model.",
+          "regex": "harness key|harness's authenticated|proxy context|authenticated context|never from the model|not from the model|never from user input"
+        },
+        {
+          "text": "CRM fields projected to Linear are allowlisted, with contact data, notes, and secrets redacted by default.",
+          "contains_all": [
+            "allowlist",
+            "redact"
+          ]
+        },
+        {
+          "text": "The Linear write requires an approval reference and the CRM projection requires explicit consent.",
+          "contains_all": [
+            "consent",
+            "approval"
+          ]
+        },
+        {
+          "text": "The plan uses a deterministic idempotency key for the write.",
+          "contains_any": [
+            "idempotency",
+            "idempotent"
+          ]
+        },
+        {
+          "text": "The plan emits audit metadata (subject, decision, digests) rather than provider payloads or credentials.",
+          "contains_any": [
+            "audit metadata",
+            "audit event",
+            "audit"
+          ]
+        }
+      ]
     },
     {
       "id": 2,
-      "prompt": "A legacy tool has a local role permission and a provider client handler but no connector manifest. Decide whether it can ship.",
+      "prompt": "A legacy tool has a local role permission and a provider client handler but no connector manifest. Decide whether it can ship.\n\nDo not execute anything — just explain in text.",
       "expected_output": "The tool is rejected or quarantined until canonical registration, proxy reachability, policy tests, and provider-boundary tests exist; local permission is not treated as authorization.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "The tool cannot ship as-is: it must be registered and proxy-reachable, or explicitly quarantined.",
+        "Local role/permission mappings are treated as discovery or UX filters only, not authorization; the proxy decision is authoritative.",
+        "The provider client handler must not live in the metadata-only catalog; provider execution stays tenant-side.",
+        "If quarantined, the tool must be absent from model/harness exposure with a test proving direct invocation cannot reach a provider adapter."
+      ],
+      "checks": [
+        {
+          "text": "The tool cannot ship as-is: it must be registered and proxy-reachable, or explicitly quarantined.",
+          "contains_any": [
+            "quarantine",
+            "quarantined",
+            "registered and proxy-reachable"
+          ]
+        },
+        {
+          "text": "Local role/permission mappings are treated as discovery or UX filters only, not authorization; the proxy decision is authoritative.",
+          "contains_any": [
+            "not authorization",
+            "discovery or ux filter",
+            "ux filter",
+            "authoritative",
+            "discovery filter",
+            "does not provide authorization"
+          ]
+        },
+        {
+          "text": "The provider client handler must not live in the metadata-only catalog; provider execution stays tenant-side.",
+          "contains_any": [
+            "metadata-only",
+            "provider clients",
+            "provider client",
+            "tenant-side"
+          ]
+        },
+        {
+          "text": "If quarantined, the tool must be absent from model/harness exposure with a test proving direct invocation cannot reach a provider adapter.",
+          "contains_any": [
+            "model/harness exposure",
+            "harness exposure",
+            "direct invocation"
+          ]
+        }
+      ]
     },
     {
       "id": 3,
-      "prompt": "Review a connector tool schema for tenant_id, workspace_id, an API token in binding metadata, and a direct provider handler.",
+      "prompt": "Review a connector tool schema for tenant_id, workspace_id, an API token in binding metadata, and a direct provider handler.\n\nDo not execute anything — just explain in text.",
       "expected_output": "The review identifies all four contract violations and proposes delegated scope, opaque references, handlerless schema metadata, and fail-closed proxy execution.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "The review rejects tenant/workspace identifiers in the schema — they must be resolved from the authenticated harness key/proxy context, never accepted from the model.",
+        "The review rejects the API token in binding metadata — only opaque connector IDs and credential references are allowed, and credentials are never resolved or returned in the harness.",
+        "The review rejects the direct provider handler — execution must go through the governed proxy invocation and fail closed.",
+        "The review proposes a handlerless schema with semantic names, permissions, resource kinds, and delegated context."
+      ],
+      "checks": [
+        {
+          "text": "The review rejects tenant/workspace identifiers in the schema — they must be resolved from the authenticated harness key/proxy context, never accepted from the model.",
+          "contains_any": [
+            "harness key",
+            "proxy context",
+            "never accept",
+            "not from the model"
+          ]
+        },
+        {
+          "text": "The review rejects the API token in binding metadata — only opaque connector IDs and credential references are allowed, and credentials are never resolved or returned in the harness.",
+          "contains_all": [
+            "opaque",
+            "credential reference"
+          ]
+        },
+        {
+          "text": "The review rejects the direct provider handler — execution must go through the governed proxy invocation and fail closed.",
+          "contains_any": [
+            "fail closed",
+            "fail-closed",
+            "fails closed"
+          ]
+        },
+        {
+          "text": "The review proposes a handlerless schema with semantic names, permissions, resource kinds, and delegated context.",
+          "contains_any": [
+            "semantic name",
+            "delegated context",
+            "resource kind"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Our harness's kei-proxy sidecar is down during a deploy. A user asks the agent to update a CRM lead. What should the agent do, and what should the code guarantee?\n\nDo not execute anything — just explain in text.",
+      "expected_output": "Fail closed: a missing proxy, denied policy, invalid scope, inactive connector, missing approval, or transport failure blocks the call. No fallback to a direct provider client. Unknown write outcomes are reconciled before retrying, with deterministic idempotency keys so a provider mutation is never blindly duplicated.",
+      "files": [],
+      "expectations": [
+        "The response says the call must fail closed — a missing proxy or transport failure blocks the provider call.",
+        "The response does not fall back to a direct provider client when the proxy is unavailable.",
+        "The response says unknown write outcomes must be reconciled before retrying.",
+        "The response uses deterministic idempotency keys so a provider mutation is never blindly duplicated."
+      ],
+      "checks": [
+        {
+          "text": "The response says the call must fail closed — a missing proxy or transport failure blocks the provider call.",
+          "contains_any": [
+            "fail closed",
+            "fail-closed",
+            "fails closed"
+          ]
+        },
+        {
+          "text": "The response does not fall back to a direct provider client when the proxy is unavailable.",
+          "contains_any": [
+            "no fallback",
+            "not fall back",
+            "never fall back",
+            "no direct provider",
+            "not a direct"
+          ]
+        },
+        {
+          "text": "The response says unknown write outcomes must be reconciled before retrying.",
+          "contains_any": [
+            "reconcile",
+            "reconciling"
+          ]
+        },
+        {
+          "text": "The response uses deterministic idempotency keys so a provider mutation is never blindly duplicated.",
+          "contains_any": [
+            "idempotency",
+            "idempotent",
+            "duplicate"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "What exactly goes into the audit event for a governed CRM read, and what must never appear in it?\n\nDo not execute anything — just explain in text.",
+      "expected_output": "Audit metadata: subject, org/workspace, agent, framework, capability, action, resource, approval, trace, idempotency, decision, and digests. Never: provider payloads, credentials, or secret values.",
+      "files": [],
+      "expectations": [
+        "The response lists audit metadata fields (subject, org/workspace, agent, action, resource, decision, digests, and similar).",
+        "The response says provider payloads and credentials/secret values never appear in the audit event."
+      ],
+      "checks": [
+        {
+          "text": "The response lists audit metadata fields (subject, org/workspace, agent, action, resource, decision, digests, and similar).",
+          "contains_all": [
+            "subject",
+            "decision"
+          ]
+        },
+        {
+          "text": "The response says provider payloads and credentials/secret values never appear in the audit event.",
+          "contains_any": [
+            "provider payload",
+            "credential",
+            "secret"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "We want the agent to take a CRM contact's notes and include them in a Linear task description for the support team. Is that allowed by default?\n\nDo not execute anything — just explain in text.",
+      "expected_output": "No — projecting CRM context into another provider requires explicit consent, an allowlisted field set, and redaction of contact data, notes, secrets, tokens, and arbitrary fields by default.",
+      "files": [],
+      "expectations": [
+        "The response says the projection requires explicit consent before projecting CRM context into another provider.",
+        "The response says notes/contact data are redacted by default and only allowlisted CRM fields may be projected.",
+        "The response does not allow the projection by default."
+      ],
+      "checks": [
+        {
+          "text": "The response says the projection requires explicit consent before projecting CRM context into another provider.",
+          "contains_all": [
+            "consent"
+          ]
+        },
+        {
+          "text": "The response says notes/contact data are redacted by default and only allowlisted CRM fields may be projected.",
+          "contains_all": [
+            "allowlist",
+            "redact"
+          ]
+        },
+        {
+          "text": "The response does not allow the projection by default.",
+          "regex": "(^|\\n)[\\s*_>#]*no\\b|not allowed|requires (explicit )?consent"
+        }
+      ]
     }
   ]
 }
