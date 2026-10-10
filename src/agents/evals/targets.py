@@ -99,6 +99,15 @@ WORKFLOW_TARGETS: tuple[EvalTarget, ...] = (
         "docs.get_document",
         "http_api.get_record",
     ),
+    # Harness-side Drive doc writes (confirm-required) plus the reads used to
+    # find a doc before updating it.
+    _workflow(
+        "drive_publish",
+        "drive_create_doc",
+        "drive_update_doc",
+        "drive.list_files",
+        "docs.get_document",
+    ),
 )
 
 EVAL_TARGETS: tuple[EvalTarget, ...] = AGENT_TARGETS + WORKFLOW_TARGETS

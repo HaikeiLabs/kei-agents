@@ -24,6 +24,8 @@ decision point.
   only and never customer payloads, results, or credentials.
 - **Writes are agent action tools**: GitHub, CRM, and Linear writes are agent
   action tools executed by the agent harness, not ABAC connector capabilities.
+  Google Drive doc writes are harness-side action tools that run with the
+  user's own OAuth token (see [docs/drive-write.md](docs/drive-write.md)).
 
 Do not add provider clients or credential resolution to this repository. This
 is a docs-only repository; see [CONTRIBUTING.md](CONTRIBUTING.md) and
@@ -69,6 +71,8 @@ tools = render_tools(TOOL_DEFINITIONS, "gpt-4")
 | get_workflow_status | Get CI/CD workflow status | github_read |
 | create_pull_request | Open a GitHub pull request from an existing branch. Use it when the user says the work is on a branch and asks for a PR; call it directly, without reading the linked issue first | github_write |
 | start_game | Start interactive games | search_wiki |
+| drive_create_doc | Create a Google Doc from Markdown in a Drive folder (harness-side, confirm-required) | drive_write |
+| drive_update_doc | Replace a Google Doc's content with Markdown (harness-side, confirm-required) | drive_write |
 
 See `src/agents/tool_definitions.py` for full list.
 
@@ -166,6 +170,7 @@ All contributors must be approved by existing maintainers. See [CONTRIBUTORS](CO
 
 ### Design Documents
 
+- [Harness-side Drive Writes](docs/drive-write.md) - `drive_create_doc`/`drive_update_doc`: user OAuth (`drive.file`), confirm-required preview, `drive:folder/<id>` / `drive:doc/<id>` authorize resources
 - [Workflow Spec Validation](docs/workflow-validation.md) - structural rules `validate_read_first` enforces: cycles, reachability-based approval gates, typed permissions, egress classification
 - [npm Distribution Strategy](docs/npm-distribution-strategy.md) - proposal for publishing a JS/TypeScript consumable, plus Go distribution as a separate workstream (not approved)
 

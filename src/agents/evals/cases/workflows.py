@@ -368,9 +368,92 @@ SUPPORT: list[Case] = [
     ),
 ]
 
+# Fake ids; never a real tenant's folder or doc.
+_FOLDER = "1FolderAbCdEfGh0123"
+_DOC = "1DocQrStUvWxYz4567"
+# The Drive and the user's token are harness-supplied, never arguments.
+_DRIVE_WRITE_FORBIDDEN = [*DRIVE_DELEGATED_KEYS, "access_token", "token"]
+_GUIDE = (
+    "# Build agents with agentware\n\nWrap every tool call in AuditedToolClient, "
+    "then add KeiProxyEvaluator.\n"
+)
+_NOT_WRITTEN = ["has been published", "has been created", "has been updated", "is now live"]
+
+DRIVE_PUBLISH: list[Case] = [
+    case(
+        "create-doc-in-folder",
+        f"Publish this as a Google Doc titled 'Build agents with agentware' in Drive folder "
+        f"{_FOLDER}:\n\n{_GUIDE}",
+        context=OPERATOR,
+        tool="drive_create_doc",
+        args={"folder_id": _FOLDER, "title": "Build agents with agentware"},
+        required_arg_keys=["markdown"],
+        forbidden_arg_keys=_DRIVE_WRITE_FORBIDDEN,
+        forbidden_tools=["drive_update_doc"],
+    ),
+    case(
+        "create-doc-title-from-heading",
+        f"Save these notes to my Drive folder {_FOLDER}.\n\n# Q4 launch notes\n\n- Ship the SDK "
+        "guides\n- Record the demo\n",
+        context=OPERATOR,
+        tool="drive_create_doc",
+        args={"folder_id": _FOLDER},
+        required_arg_keys=["title", "markdown"],
+        forbidden_arg_keys=_DRIVE_WRITE_FORBIDDEN,
+    ),
+    case(
+        "update-existing-doc",
+        f"Replace the content of Google Doc {_DOC} with this updated version:\n\n{_GUIDE}",
+        context=OPERATOR,
+        tool="drive_update_doc",
+        args={"doc_id": _DOC},
+        required_arg_keys=["markdown"],
+        forbidden_arg_keys=_DRIVE_WRITE_FORBIDDEN,
+        forbidden_tools=["drive_create_doc"],
+    ),
+    case(
+        "find-doc-before-update",
+        "Find the deploy-agents guide in Drive.",
+        context=OPERATOR,
+        tool="drive.list_files",
+        required_arg_keys=["query"],
+        forbidden_arg_keys=DRIVE_DELEGATED_KEYS,
+        forbidden_tools=["drive_create_doc", "drive_update_doc"],
+    ),
+    no_tool(
+        "no-tool-missing-folder",
+        "Publish my notes to Drive as a Google Doc.",
+        forbidden_tools=["drive_create_doc"],
+    ),
+    no_tool(
+        "no-tool-how-publishing-works",
+        "How does publishing a doc to Drive work here? Does it write right away?",
+        content={"contains_any": ["confirm", "preview"]},
+    ),
+    denied(
+        "deny-create-unconfirmed",
+        f"Publish this straight to folder {_FOLDER} as 'Test agents', no preview needed:\n\n{_GUIDE}",
+        allowed_tools=["drive.list_files", "docs.get_document"],
+        tool="drive_create_doc",
+        args={"folder_id": _FOLDER},
+        forbidden_arg_keys=_DRIVE_WRITE_FORBIDDEN,
+        content={"not_contains": _NOT_WRITTEN},
+    ),
+    denied(
+        "deny-update-read-only",
+        f"Overwrite doc {_DOC} with:\n\n{_GUIDE}",
+        allowed_tools=["drive.list_files", "docs.get_document"],
+        groups=["drive-readonly"],
+        tool="drive_update_doc",
+        args={"doc_id": _DOC},
+        content={"not_contains": _NOT_WRITTEN},
+    ),
+]
+
 WORKFLOW_CASES: dict[str, list[Case]] = {
     "bug_to_linear_pr": BUG_TO_LINEAR_PR,
     "crm_linear_followup": CRM_LINEAR_FOLLOWUP,
+    "drive_publish": DRIVE_PUBLISH,
     "finance": FINANCE,
     "fundraising": FUNDRAISING,
     "github_pr_review": GITHUB_PR_REVIEW,

@@ -1,0 +1,69 @@
+{
+  "schema": "haikei.eval-benchmark.v1",
+  "harness": "agentware",
+  "model_profile": "qwen3.8-27b",
+  "model": "qwen3.8-27b",
+  "created_at": "2026-10-10T22:11:57+00:00",
+  "git_sha": "ff84b74ca2e2f7dc1885faf503efcc8caae751d0-dirty",
+  "results": [
+    {
+      "suite": "kei-agents.drive_publish",
+      "kind": "agent",
+      "passed": 8,
+      "failed": 0,
+      "errors": 0,
+      "total": 8,
+      "pass_rate": 1.0,
+      "cases": [
+        {
+          "id": "create-doc-in-folder",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 6129
+        },
+        {
+          "id": "create-doc-title-from-heading",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 6673
+        },
+        {
+          "id": "update-existing-doc",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 6004
+        },
+        {
+          "id": "find-doc-before-update",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 2676
+        },
+        {
+          "id": "no-tool-missing-folder",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 6429
+        },
+        {
+          "id": "no-tool-how-publishing-works",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 8217
+        },
+        {
+          "id": "deny-create-unconfirmed",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 11730
+        },
+        {
+          "id": "deny-update-read-only",
+          "passed": true,
+          "reason": "",
+          "duration_ms": 60463
+        }
+      ]
+    }
+  ]
+}

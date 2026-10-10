@@ -1,7 +1,7 @@
 # Eval suites for the prebuilt agents
 
 kei-agents ships table-test eval suites for its prebuilt agents (Pedro, the PDE
-search agent) and its seven workflows. They measure how well a model uses
+search agent) and its eight workflows. They measure how well a model uses
 the system prompts and tool schemas defined here, regardless of the harness
 (Discord, PDE, openwebui) that later hosts the agent.
 

@@ -6,6 +6,7 @@ This package provides:
   Google Drive/Docs, S3, http_api/CRM, Notion, Gmail, Tito)
 - CRM tools for lead management (mock adapter)
 - GitHub tools for issue/PR management (with governance)
+- Harness-side Google Drive doc write tools (confirm-required, user OAuth)
 - Permission-based access control
  - Harness agent definitions (PDE search agent, Pedro)
 - Harness-neutral workflow registry for discovering workflows by tool or
@@ -89,6 +90,7 @@ from agents.connectors import (
     S3_READ_TOOL_DEFINITIONS,
     TITO_READ_TOOL_DEFINITIONS,
 )
+from agents.drive_write.tools import DRIVE_WRITE_TOOL_DEFINITIONS
 
 # Imported after connectors so the workflow registry's module-level
 # _register_builtin_workflows() sees the full CONNECTOR_READ_TOOL_DEFINITIONS
@@ -116,6 +118,7 @@ __all__ = [
     "ALL_TOOL_DEFINITIONS",
     "CONNECTOR_READ_TOOL_DEFINITIONS",
     "DRIVE_READ_TOOL_DEFINITIONS",
+    "DRIVE_WRITE_TOOL_DEFINITIONS",
     "GITHUB_READ_TOOL_DEFINITIONS",
     "GMAIL_READ_TOOL_DEFINITIONS",
     "HARNESS_AGENT_DEFINITIONS",
