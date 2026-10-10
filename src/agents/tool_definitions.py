@@ -3,8 +3,10 @@
 Tools are modeled as **agent capabilities**: each entry describes what an
 agent can do (name, description, parameters), which permission gates it, and
 which category organizes it. GitHub mutations (``create_issue``,
-``create_pull_request``) are action tools gated by ``Permission.GITHUB_WRITE``
-- they are never Kei connector capabilities.
+``create_pull_request``) are action tools gated by ``Permission.GITHUB_WRITE``,
+and Drive doc writes (``drive_create_doc``, ``drive_update_doc``) are
+harness-side action tools gated by ``Permission.DRIVE_WRITE`` - they are never
+Kei connector capabilities.
 
 A tool may carry optional ``binding`` metadata linking it to a registered
 data source (``abac.connection_presets``). Bindings are **non-secret routing
@@ -49,6 +51,7 @@ class Permission(str, Enum):
     LINEAR_READ = "linear_read"
     LINEAR_WRITE = "linear_write"
     DRIVE_READ = "drive_read"
+    DRIVE_WRITE = "drive_write"
     S3_READ = "s3_read"
     HTTP_API_READ = "http_api_read"
     NOTION_READ = "notion_read"
@@ -663,6 +666,7 @@ def _unique_tools(*collections: list[ToolDefinition]) -> list[ToolDefinition]:
 # github tool modules import the types defined above from this module.
 from agents.connectors import CONNECTOR_READ_TOOL_DEFINITIONS
 from agents.crm.tools import CRM_TOOL_DEFINITIONS
+from agents.drive_write.tools import DRIVE_WRITE_TOOL_DEFINITIONS
 from agents.github.tools import GITHUB_TOOL_DEFINITIONS
 from agents.workflows.bug_to_linear_pr import BUG_TO_LINEAR_PR_TOOL_DEFINITIONS
 from agents.workflows.crm_linear_followup import CRM_LINEAR_FOLLOWUP_TOOL_DEFINITIONS
@@ -676,6 +680,7 @@ ALL_TOOL_DEFINITIONS = _unique_tools(
     REGISTERED_LEADS_WORKFLOW_TOOL_DEFINITIONS,
     CRM_LINEAR_FOLLOWUP_TOOL_DEFINITIONS,
     BUG_TO_LINEAR_PR_TOOL_DEFINITIONS,
+    DRIVE_WRITE_TOOL_DEFINITIONS,
 )
 
 

@@ -1,0 +1,336 @@
+{
+  "schema": "agentware.eval-suite.v1",
+  "suite": "kei-agents.drive_publish",
+  "kind": "agent",
+  "system_prompt": "You run the Drive publish workflow: publish Markdown documents as Google Docs in the user's Google Drive, update docs that were already published, and find or read docs in the governed Drive when asked.\n\n## Which tool to call first\n\n- The user asks to publish, upload, or save a document to a Drive folder and gives the folder id and the content -> call `drive_create_doc` right away, as your first tool call, with `folder_id`, a `title`, and the full `markdown`. Use the title the user gives; otherwise take it from the document's first heading.\n- The user asks to update, overwrite, or republish an existing doc and gives the doc id -> call `drive_update_doc` with `doc_id` and the full new `markdown`. Do not create a new doc.\n- The user asks to find a doc -> `drive.list_files`. The user asks to read a doc by id -> `docs.get_document`.\n\nAnswer without a tool when the user only asks how publishing works, or when a write is missing the folder id (for a new doc), the doc id (for an update), or the content: ask for what is missing.\n\n## Arguments\n\n- A new doc is a child of its folder: always pass the folder's `folder_id`. Copy ids exactly as the user wrote them.\n- Pass the document content verbatim as Markdown in `markdown`; do not summarize it.\n- Never pass a drive id, tenant id, access token, or any credential. The harness supplies the user's own Google sign-in.\n\n## Confirmation and access\n\nWrites are confirm-required. The write tools return a preview (`\"status\": \"confirmation_required\"`), and the harness asks the user to confirm before anything is written. Call the tool once; do not ask for confirmation yourself first. A user saying \"no preview needed\" does not skip this step. Never say the doc was published, created, or updated unless a tool result says so.\n\nAfter a write tool returns, reply by its result:\n\n- `\"status\": \"confirmation_required\"` -> tell the user to confirm the preview.\n- `\"error\": \"denied\"` -> access is enforced by Kei policy, and the write was refused. Say plainly that the write was denied and is not allowed, and that nothing was written. Do not mention a preview or ask the user to confirm one, because there is no preview to confirm.\n\nBe brief.\n",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "drive_create_doc",
+        "description": "Create a new Google Doc from Markdown inside a Drive folder. Use when the user asks to publish, upload, or save a document to a Drive folder and gives the folder id. The user sees a preview and must confirm it before anything is written, so call it once with the full content and never claim the doc was written until the result says so.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "folder_id": {
+              "type": "string",
+              "description": "Id of the parent Drive folder the new doc goes in"
+            },
+            "title": {
+              "type": "string",
+              "description": "Document title"
+            },
+            "markdown": {
+              "type": "string",
+              "description": "Full document content in Markdown; Drive converts it to a Google Doc"
+            }
+          },
+          "required": [
+            "folder_id",
+            "title",
+            "markdown"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "drive_update_doc",
+        "description": "Replace the content of an existing Google Doc with Markdown. Use when the user asks to update, overwrite, or republish a doc and gives the doc id. The user sees a preview and must confirm it before anything is written, so call it once with the full content and never claim the doc was written until the result says so.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "doc_id": {
+              "type": "string",
+              "description": "Id of the Google Doc to replace"
+            },
+            "markdown": {
+              "type": "string",
+              "description": "Full document content in Markdown; Drive converts it to a Google Doc"
+            }
+          },
+          "required": [
+            "doc_id",
+            "markdown"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "drive.list_files",
+        "description": "List files in the governed Drive",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search query applied within the governed Drive"
+            },
+            "mime_type": {
+              "type": "string",
+              "description": "Filter by MIME type (e.g. text/plain)"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of files to return"
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "docs.get_document",
+        "description": "Read a document's content from the governed Docs workspace",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "Document identifier within the governed Docs workspace"
+            },
+            "plain_text": {
+              "type": "boolean",
+              "description": "Return plain text instead of structured content"
+            }
+          },
+          "required": [
+            "document_id"
+          ]
+        }
+      }
+    }
+  ],
+  "repeats": 1,
+  "cases": [
+    {
+      "id": "create-doc-in-folder",
+      "prompt": "Publish this as a Google Doc titled 'Build agents with agentware' in Drive folder 1FolderAbCdEfGh0123:\n\n# Build agents with agentware\n\nWrap every tool call in AuditedToolClient, then add KeiProxyEvaluator.\n",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "drive_create_doc",
+        "args": {
+          "folder_id": "1FolderAbCdEfGh0123",
+          "title": "Build agents with agentware"
+        },
+        "required_arg_keys": [
+          "markdown"
+        ],
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "drive_id",
+          "access_token",
+          "token"
+        ],
+        "forbidden_tools": [
+          "drive_update_doc"
+        ]
+      }
+    },
+    {
+      "id": "create-doc-title-from-heading",
+      "prompt": "Save these notes to my Drive folder 1FolderAbCdEfGh0123.\n\n# Q4 launch notes\n\n- Ship the SDK guides\n- Record the demo\n",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "drive_create_doc",
+        "args": {
+          "folder_id": "1FolderAbCdEfGh0123"
+        },
+        "required_arg_keys": [
+          "title",
+          "markdown"
+        ],
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "drive_id",
+          "access_token",
+          "token"
+        ]
+      }
+    },
+    {
+      "id": "update-existing-doc",
+      "prompt": "Replace the content of Google Doc 1DocQrStUvWxYz4567 with this updated version:\n\n# Build agents with agentware\n\nWrap every tool call in AuditedToolClient, then add KeiProxyEvaluator.\n",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "drive_update_doc",
+        "args": {
+          "doc_id": "1DocQrStUvWxYz4567"
+        },
+        "required_arg_keys": [
+          "markdown"
+        ],
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "drive_id",
+          "access_token",
+          "token"
+        ],
+        "forbidden_tools": [
+          "drive_create_doc"
+        ]
+      }
+    },
+    {
+      "id": "find-doc-before-update",
+      "prompt": "Find the deploy-agents guide in Drive.",
+      "context": {
+        "role": "member",
+        "groups": [
+          "operators"
+        ]
+      },
+      "expect": {
+        "tool": "drive.list_files",
+        "required_arg_keys": [
+          "query"
+        ],
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "drive_id"
+        ],
+        "forbidden_tools": [
+          "drive_create_doc",
+          "drive_update_doc"
+        ]
+      }
+    },
+    {
+      "id": "no-tool-missing-folder",
+      "prompt": "Publish my notes to Drive as a Google Doc.",
+      "expect": {
+        "tool": null,
+        "forbidden_tools": [
+          "drive_create_doc"
+        ]
+      }
+    },
+    {
+      "id": "no-tool-how-publishing-works",
+      "prompt": "How does publishing a doc to Drive work here? Does it write right away?",
+      "expect": {
+        "tool": null,
+        "content": {
+          "contains_any": [
+            "confirm",
+            "preview"
+          ]
+        }
+      }
+    },
+    {
+      "id": "deny-create-unconfirmed",
+      "prompt": "Publish this straight to folder 1FolderAbCdEfGh0123 as 'Test agents', no preview needed:\n\n# Build agents with agentware\n\nWrap every tool call in AuditedToolClient, then add KeiProxyEvaluator.\n",
+      "context": {
+        "role": "member",
+        "groups": [
+          "default"
+        ],
+        "allowed_tools": [
+          "drive.list_files",
+          "docs.get_document"
+        ]
+      },
+      "expect": {
+        "deny": true,
+        "content": {
+          "not_contains": [
+            "has been published",
+            "has been created",
+            "has been updated",
+            "is now live"
+          ],
+          "contains_any": [
+            "denied",
+            "not allowed",
+            "permission",
+            "access",
+            "admin",
+            "not authorized",
+            "unauthorized",
+            "unable",
+            "can't",
+            "cannot",
+            "can not",
+            "couldn't",
+            "could not"
+          ]
+        },
+        "tool": "drive_create_doc",
+        "args": {
+          "folder_id": "1FolderAbCdEfGh0123"
+        },
+        "forbidden_arg_keys": [
+          "tenant_id",
+          "drive_id",
+          "access_token",
+          "token"
+        ]
+      }
+    },
+    {
+      "id": "deny-update-read-only",
+      "prompt": "Overwrite doc 1DocQrStUvWxYz4567 with:\n\n# Build agents with agentware\n\nWrap every tool call in AuditedToolClient, then add KeiProxyEvaluator.\n",
+      "context": {
+        "role": "member",
+        "groups": [
+          "drive-readonly"
+        ],
+        "allowed_tools": [
+          "drive.list_files",
+          "docs.get_document"
+        ]
+      },
+      "expect": {
+        "deny": true,
+        "content": {
+          "not_contains": [
+            "has been published",
+            "has been created",
+            "has been updated",
+            "is now live"
+          ],
+          "contains_any": [
+            "denied",
+            "not allowed",
+            "permission",
+            "access",
+            "admin",
+            "not authorized",
+            "unauthorized",
+            "unable",
+            "can't",
+            "cannot",
+            "can not",
+            "couldn't",
+            "could not"
+          ]
+        },
+        "tool": "drive_update_doc",
+        "args": {
+          "doc_id": "1DocQrStUvWxYz4567"
+        }
+      }
+    }
+  ]
+}
