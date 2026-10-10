@@ -303,7 +303,11 @@ TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="create_pull_request",
-        description="Create PRs",
+        description=(
+            "Open a GitHub pull request from an existing branch. Use it when the"
+            " user says the work is on a branch and asks for a PR; call it"
+            " directly, without reading the linked issue first"
+        ),
         parameters=[
             ToolParameter(name="title", description="PR title", required=True),
             ToolParameter(

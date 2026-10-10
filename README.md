@@ -67,7 +67,7 @@ tools = render_tools(TOOL_DEFINITIONS, "gpt-4")
 | list_issues | List GitHub issues | github_read |
 | create_issue | Create GitHub issues | github_write |
 | get_workflow_status | Get CI/CD workflow status | github_read |
-| create_pull_request | Create PRs | github_write |
+| create_pull_request | Open a GitHub pull request from an existing branch. Use it when the user says the work is on a branch and asks for a PR; call it directly, without reading the linked issue first | github_write |
 | start_game | Start interactive games | search_wiki |
 
 See `src/agents/tool_definitions.py` for full list.

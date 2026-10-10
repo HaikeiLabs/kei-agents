@@ -19,7 +19,11 @@ from agents.tool_definitions import (
 GITHUB_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ToolDefinition(
         name="github.get_repository",
-        description="Read metadata for the governed repository at a given ref",
+        description=(
+            "Read metadata (default branch, description) for the governed"
+            " repository at a given ref. Use it for questions about the repository"
+            " itself; it is not a step before reading a pull request"
+        ),
         parameters=[
             ToolParameter(
                 name="ref",
@@ -61,7 +65,11 @@ GITHUB_READ_TOOL_DEFINITIONS: list[ToolDefinition] = [
     ),
     ToolDefinition(
         name="github.get_pull_request",
-        description="Read a single pull request in the governed repository",
+        description=(
+            "Read a single pull request in the governed repository to review or"
+            " inspect it. Read-only: do not call it for requests to approve,"
+            " comment on, merge, or close a pull request"
+        ),
         parameters=[
             ToolParameter(
                 name="pr_number",
