@@ -31,10 +31,16 @@ must never send provider payloads, credentials, or secret values to Kei/ABAC.
 
 ## Implementation rules
 
+**Every design or review must address all applicable rules below.** Do not
+stop after addressing the first rule that comes to mind — check each rule
+against your plan before considering it complete.
+
 1. Define semantic names, permissions, resource kinds, and delegated context in
    the canonical tool schema.
 2. Never accept tenant, organization, or workspace identifiers from the model.
-   Resolve them from the authenticated harness key/proxy context.
+   Resolve them from the authenticated harness key/proxy context, and name
+   that source when you describe a design (a chat guild or channel ID is not
+   an authenticated scope on its own).
 3. Treat local role/configuration mappings as discovery or UX filters only.
    They are not authorization. The proxy decision is authoritative.
 4. Use opaque connector IDs and credential references only. Never resolve or
@@ -52,11 +58,64 @@ must never send provider payloads, credentials, or secret values to Kei/ABAC.
    action, resource, approval, trace, idempotency, decision, and digests), not
    provider payloads or credentials.
 
+## Scenario patterns
+
+When asked to design or review a governed proxy integration, address **all**
+applicable implementation rules, not just the first one that comes to mind.
+Pay special attention to these recurring patterns:
+
+### Proxy-unavailable during write
+
+When the proxy sidecar is down during a provider write, the outcome is
+**uncertain** — the write may or may not have been received. The correct
+response is:
+
+1. **Fail closed** — do not fall back to a direct provider client, inline
+   credential resolution, or ungoverned API call.
+2. **Reconcile before retrying** — check the actual provider state to
+   determine whether the write succeeded, then retry with a deterministic
+   idempotency key so a completed mutation is never blindly duplicated.
+3. **Audit the denial** — record the blocked attempt with reason
+   `proxy_unreachable`.
+
+"Fail closed" is necessary but not sufficient; reconciliation and
+idempotency are equally required when the call was a write.
+
+### Connector schema review
+
+When reviewing a tool schema, name each violation, the rule it breaks, and
+the fix:
+
+- `tenant_id`, `workspace_id`, org IDs as parameters: remove them; scope is
+  resolved from the authenticated harness key/proxy context (rule 2).
+- Tokens or secrets in binding metadata: replace them with an opaque
+  connector ID and credential reference (rule 4).
+- A direct provider handler: remove it; execution goes through the governed
+  proxy invocation, which fails closed on a missing proxy, denied policy or
+  transport failure (rule 5).
+
+Then propose the corrected, handlerless schema: semantic name, permission,
+resource kind, and delegated context (rule 1).
+
+### CRM-to-provider projection
+
+Cross-provider data projection (e.g., CRM fields into a Linear task) must:
+
+1. Require explicit consent before projecting CRM context into another
+   provider.
+2. Allowlist only the fields needed for the projection.
+3. Redact contact data, notes, secrets, tokens, and arbitrary fields by
+   default.
+
+Never assume projection is allowed by default — it requires all three.
+
 ## Release gate
 
 Every tool must be registered and proxy-reachable, or explicitly quarantined.
 Quarantined tools must be absent from model/harness exposure and have a test
-proving direct invocation cannot reach a provider adapter. Merging a pull
+proving direct invocation cannot reach a provider adapter. When asked whether
+a tool can ship, give both paths: register it and route it through the proxy,
+or quarantine it with those two requirements. Merging a pull
 request or passing schema-only tests is not governance evidence.
 
 ## Verification checklist
