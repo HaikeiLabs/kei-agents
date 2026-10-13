@@ -48,6 +48,24 @@ pytest
 5. Submit a Pull Request
 6. Wait for review from a maintainer
 
+## Agent evals
+
+The `Agent evals` workflow (`.github/workflows/agent-evals.yaml`, a copy of
+the HaikeiLabs/kei gate; runbook: kei `docs/agent-evals-gate.md`) grades the
+suites in `evals/suites/` on both model profiles at a 95% threshold.
+
+- **Pull requests** run only the suites the pull request changes, once per
+  case. `agent-evals-report` is the check to watch.
+- **Nightly** (09:00 UTC on `main`, or by hand with workflow_dispatch) every
+  suite runs 3 times per case. That averaged sweep is the record: a failing
+  sweep opens or updates the "Nightly agent evals below 95%" issue, and a
+  passing one closes it.
+- **`evals:tuning`**: while a pull request is still tuning an agent's prompt
+  or tools, add this label. Nothing runs, and the gate fails with
+  "evals:tuning is set: remove the label to run the gate before merge". Remove
+  it once the suite reaches at least 95% locally on both profiles with
+  `--repeats 3`; removing it runs the gate.
+
 ## Code Style
 
 - Use Python 3.11+ features
