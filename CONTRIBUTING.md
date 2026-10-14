@@ -55,7 +55,9 @@ the HaikeiLabs/kei gate; runbook: kei `docs/agent-evals-gate.md`) grades the
 suites in `evals/suites/` on both model profiles at a 95% threshold.
 
 - **Pull requests** run only the suites the pull request changes, once per
-  case. `agent-evals-report` is the check to watch.
+  case. `agent-evals-report` is the check to watch. Each eval job stops after
+  30 minutes (a timeout fails the check), and closing or merging the pull
+  request cancels its eval run.
 - **Nightly** (09:00 UTC on `main`, or by hand with workflow_dispatch) every
   suite runs 3 times per case. That averaged sweep is the record: a failing
   sweep opens or updates the "Nightly agent evals below 95%" issue, and a
