@@ -146,7 +146,7 @@ jobs:
 
       - name: Select the suites
         id: select
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           REPO_DIR: _eval/repo
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -603,7 +603,7 @@ jobs:
 
       - name: Summarize and comment
         id: report
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           RESULTS_DIR: results
           SCOPE_RESULT: ${{ needs.scope.result }}
@@ -836,7 +836,7 @@ jobs:
       issues: write
     steps:
       - name: Open, update or close the issue
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           NIGHTLY_PASSED: ${{ needs.report.outputs.passed }}
           NIGHTLY_BODY: ${{ needs.report.outputs.body }}
