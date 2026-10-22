@@ -64,13 +64,14 @@ class TestHarnessAgents:
         for agent in HARNESS_AGENT_DEFINITIONS:
             assert validate_tool_definitions(get_agent_tools(agent)) == []
 
-    def test_onboarding_triage_is_toolless_and_unprivileged(self) -> None:
-        assert ONBOARDING_E2E_TRIAGE_AGENT.permissions == frozenset()
+    def test_onboarding_triage_has_only_read_permission(self) -> None:
+        assert ONBOARDING_E2E_TRIAGE_AGENT.permissions == frozenset({P.GITHUB_READ})
         assert ONBOARDING_E2E_TRIAGE_AGENT.tools == ()
         prompt = load_system_prompt(ONBOARDING_E2E_TRIAGE_AGENT)
         assert prompt is not None
-        assert "untrusted data" in prompt
-        assert "cannot modify code" in prompt
+        assert "untrusted" in prompt
+        assert "current `main`" in prompt
+        assert "cannot" in prompt
 
     def test_pde_permissions(self) -> None:
         assert PDE_SEARCH_AGENT.permissions == frozenset(

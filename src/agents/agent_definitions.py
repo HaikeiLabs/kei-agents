@@ -204,10 +204,10 @@ ONBOARDING_E2E_TRIAGE_AGENT = AgentDefinition(
     name="onboarding_e2e_triage",
     harness=Harness.DISCORD,
     description=(
-        "Read-only analysis of first-account onboarding E2E failures from "
-        "sanitized CI evidence; cannot call tools or change code"
+        "Read-only analysis of first-account onboarding E2E failures using "
+        "the failed workflow run and source on current main"
     ),
-    permissions=frozenset(),
+    permissions=frozenset({Permission.GITHUB_READ}),
     tools=(),
     system_prompt_file="prompts/onboarding_e2e_triage.md",
 )
