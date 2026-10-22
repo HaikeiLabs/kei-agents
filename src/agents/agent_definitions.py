@@ -200,6 +200,18 @@ _PEDRO_DATA_PERMISSIONS = (
 # reaches it through file_bug.
 _PEDRO_EXCLUDED_TOOLS = frozenset({*PEDRO_DEFAULT_GROUP_TOOLS, "linear.create_issue"})
 
+ONBOARDING_E2E_TRIAGE_AGENT = AgentDefinition(
+    name="onboarding_e2e_triage",
+    harness=Harness.DISCORD,
+    description=(
+        "Read-only analysis of first-account onboarding E2E failures from "
+        "sanitized CI evidence; cannot call tools or change code"
+    ),
+    permissions=frozenset(),
+    tools=(),
+    system_prompt_file="prompts/onboarding_e2e_triage.md",
+)
+
 PEDRO_AGENT = AgentDefinition(
     name="pedro",
     harness=Harness.DISCORD,
@@ -238,10 +250,12 @@ PEDRO_AGENT = AgentDefinition(
 HARNESS_AGENT_DEFINITIONS: list[AgentDefinition] = [
     PDE_SEARCH_AGENT,
     PEDRO_AGENT,
+    ONBOARDING_E2E_TRIAGE_AGENT,
 ]
 
 __all__ = [
     "HARNESS_AGENT_DEFINITIONS",
+    "ONBOARDING_E2E_TRIAGE_AGENT",
     "PDE_SEARCH_AGENT",
     "PEDRO_AGENT",
     "PEDRO_DEFAULT_GROUP_TOOLS",
