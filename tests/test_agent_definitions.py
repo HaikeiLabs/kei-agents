@@ -7,6 +7,7 @@ import pytest
 from agents import (
     ALL_TOOL_DEFINITIONS,
     HARNESS_AGENT_DEFINITIONS,
+    ONBOARDING_E2E_TRIAGE_AGENT,
     PDE_SEARCH_AGENT,
     PEDRO_AGENT,
     PEDRO_DEFAULT_GROUP_TOOLS,
@@ -49,6 +50,7 @@ class TestHarnessAgents:
         assert [a.name for a in HARNESS_AGENT_DEFINITIONS] == [
             "pde_search_agent",
             "pedro",
+            "onboarding_e2e_triage",
         ]
         assert {a.harness for a in HARNESS_AGENT_DEFINITIONS} == {
             Harness.PDE,
@@ -61,6 +63,15 @@ class TestHarnessAgents:
     def test_agent_tools_validate(self) -> None:
         for agent in HARNESS_AGENT_DEFINITIONS:
             assert validate_tool_definitions(get_agent_tools(agent)) == []
+
+    def test_onboarding_triage_has_only_read_permission(self) -> None:
+        assert ONBOARDING_E2E_TRIAGE_AGENT.permissions == frozenset({P.GITHUB_READ})
+        assert ONBOARDING_E2E_TRIAGE_AGENT.tools == ()
+        prompt = load_system_prompt(ONBOARDING_E2E_TRIAGE_AGENT)
+        assert prompt is not None
+        assert "untrusted" in prompt
+        assert "current `main`" in prompt
+        assert "cannot" in prompt
 
     def test_pde_permissions(self) -> None:
         assert PDE_SEARCH_AGENT.permissions == frozenset(
