@@ -74,7 +74,18 @@ tools = render_tools(TOOL_DEFINITIONS, "gpt-4")
 | drive_create_doc | Create a Google Doc from Markdown in a Drive folder (harness-side, confirm-required) | drive_write |
 | drive_update_doc | Replace a Google Doc's content with Markdown (harness-side, confirm-required) | drive_write |
 
-See `src/agents/tool_definitions.py` for full list.
+See `src/agents/tool_definitions.py` for the default tool list.
+
+#### Opt-in GitHub fix action
+
+`GITHUB_FIX_ACTION_TOOL` (`github.create_fix_pr`) is intentionally excluded from
+`TOOL_DEFINITIONS` and `ALL_TOOL_DEFINITIONS`. Only a dedicated fix-proposal
+agent may render it after an explicit user request. It requires
+`Permission.GITHUB_WRITE`; the harness owns the repository, branch, and draft
+status, and validates the unified diff before any provider write. The schema
+contains no repository, branch, base, shell, or credential arguments. This
+repository defines only the action schema; the Discord harness implements the
+provider call and Kei policy gate.
 
 ### Governed Connector Read Schemas
 
@@ -119,6 +130,15 @@ tools whose permission is not granted, and any `*_approve` permission (reserved)
 |-------|---------|-------------|
 | `pde_search_agent` | `pde` | `drive_read`, `notion_read`, `gmail_read`, `tito_read` |
 | `pedro` | `discord` | `github_read`, `github_write`, `crm_read`, `crm_write`, `linear_read`, `linear_write`, `drive_read`, `fundraising_read`, `fundraising_write`, `finance_read`, `finance_write` |
+| `onboarding_e2e_triage` | `discord` | `github_read` |
+| `bug_report_triage` | `discord` | `github_read` |
+| `fix_proposal` | `discord` | `github_read`, `github_write` (harness-defined opt-in action only) |
+
+The triage agents use harness-defined, read-only source tools rather than the
+catalog connector tool list. `fix_proposal` is a separate logical agent; its
+write capability is still subject to the invoking human's Kei policy on the
+exact registered action. It does not add the fix action to Pedro's default
+model tools.
 
 ### Fundraising Workflow Spec
 
