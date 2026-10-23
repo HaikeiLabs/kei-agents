@@ -92,6 +92,10 @@ from agents.connectors import (
     TITO_READ_TOOL_DEFINITIONS,
 )
 from agents.drive_write.tools import DRIVE_WRITE_TOOL_DEFINITIONS
+from agents.github.tools import (
+    GITHUB_FIX_ACTION_TOOL,
+    GITHUB_FIX_ACTION_TOOL_DEFINITIONS,
+)
 
 # Imported after connectors so the workflow registry's module-level
 # _register_builtin_workflows() sees the full CONNECTOR_READ_TOOL_DEFINITIONS
@@ -120,6 +124,8 @@ __all__ = [
     "CONNECTOR_READ_TOOL_DEFINITIONS",
     "DRIVE_READ_TOOL_DEFINITIONS",
     "DRIVE_WRITE_TOOL_DEFINITIONS",
+    "GITHUB_FIX_ACTION_TOOL",
+    "GITHUB_FIX_ACTION_TOOL_DEFINITIONS",
     "GITHUB_READ_TOOL_DEFINITIONS",
     "GMAIL_READ_TOOL_DEFINITIONS",
     "HARNESS_AGENT_DEFINITIONS",
