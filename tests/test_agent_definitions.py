@@ -6,6 +6,8 @@ import pytest
 
 from agents import (
     ALL_TOOL_DEFINITIONS,
+    BUG_REPORT_TRIAGE_AGENT,
+    FIX_PROPOSAL_AGENT,
     HARNESS_AGENT_DEFINITIONS,
     ONBOARDING_E2E_TRIAGE_AGENT,
     PDE_SEARCH_AGENT,
@@ -51,6 +53,8 @@ class TestHarnessAgents:
             "pde_search_agent",
             "pedro",
             "onboarding_e2e_triage",
+            "bug_report_triage",
+            "fix_proposal",
         ]
         assert {a.harness for a in HARNESS_AGENT_DEFINITIONS} == {
             Harness.PDE,
@@ -72,6 +76,45 @@ class TestHarnessAgents:
         assert "untrusted" in prompt
         assert "current `main`" in prompt
         assert "cannot" in prompt
+
+    def test_bug_report_triage_is_read_only_and_separate(self) -> None:
+        assert BUG_REPORT_TRIAGE_AGENT.harness is Harness.DISCORD
+        assert BUG_REPORT_TRIAGE_AGENT.permissions == frozenset({P.GITHUB_READ})
+        assert BUG_REPORT_TRIAGE_AGENT.tools == ()
+        prompt = load_system_prompt(BUG_REPORT_TRIAGE_AGENT)
+        assert prompt is not None
+        assert "sanitized report" in prompt
+        assert "untrusted evidence" in prompt
+        assert "**Likely cause**" in prompt
+        assert "**Verification**" in prompt
+
+    def test_fix_proposal_uses_only_harness_defined_write_action(self) -> None:
+        assert FIX_PROPOSAL_AGENT.harness is Harness.DISCORD
+        assert FIX_PROPOSAL_AGENT.permissions == frozenset(
+            {P.GITHUB_READ, P.GITHUB_WRITE}
+        )
+        assert FIX_PROPOSAL_AGENT.tools == ()
+        assert get_agent_tools(FIX_PROPOSAL_AGENT) == []
+        prompt = load_system_prompt(FIX_PROPOSAL_AGENT)
+        assert prompt is not None
+        for required in (
+            "only after the user explicitly clicks the fix button or sends a `/fix`",
+            "current `main`",
+            "HaikeiLabs/kei-console",
+            "Never use a shell",
+            "generic file-write tool",
+            "arbitrary GitHub mutation",
+            "merge",
+            "workflow dispatch",
+            "create_fix_pr",
+            "unified diff",
+        ):
+            assert required in prompt
+
+    def test_pedro_does_not_receive_fix_action(self) -> None:
+        assert "create_fix_pr" not in PEDRO_AGENT.tools
+        assert "create_fix_pr" not in PEDRO_DEFAULT_GROUP_TOOLS
+        assert "create_fix_pr" not in {tool.name for tool in ALL_TOOL_DEFINITIONS}
 
     def test_pde_permissions(self) -> None:
         assert PDE_SEARCH_AGENT.permissions == frozenset(
