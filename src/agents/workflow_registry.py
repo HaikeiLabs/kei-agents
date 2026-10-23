@@ -13,12 +13,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from agents.tool_definitions import (
-    ALL_TOOL_DEFINITIONS,
-    CONNECTOR_READ_TOOL_DEFINITIONS,
-    ToolDefinition,
-)
-
 
 @dataclass
 class WorkflowManifest:
@@ -28,10 +22,8 @@ class WorkflowManifest:
         name: Unique workflow identifier (``^[a-z0-9_]+(\\.[a-z0-9_]+)*$``).
         version: Semantic version of this workflow manifest.
         purpose: Human-readable description of the workflow's goal.
-        tool_dependencies: Names of ToolDefinition entries this workflow
-            depends on (semantic tool names, e.g. ``github.get_repository``).
-        connector_dependencies: Connector IDs (from ToolBinding.connector_id)
-            this workflow requires at runtime.
+        tool_dependencies: Runtime tool names this workflow requires.
+        connector_dependencies: Connector identifiers this workflow requires.
         input_schema: JSON Schema-like dict describing expected input
             parameters for the workflow.
         output_schema: JSON Schema-like dict describing the workflow's
@@ -59,38 +51,6 @@ _ORG_OR_WORKSPACE_HINTS = (
     "workspace_id",
     "workspace",
 )
-
-
-def _has_org_or_workspace_param(params: list[dict[str, Any]] | None) -> bool:
-    if not params:
-        return False
-    for p in params:
-        name = p.get("name", "") if isinstance(p, dict) else ""
-        if name in _ORG_OR_WORKSPACE_HINTS:
-            return True
-    return False
-
-
-def _extract_tool_params(tool: ToolDefinition) -> list[dict[str, Any]]:
-    if isinstance(tool.parameters, dict):
-        props = tool.parameters.get("properties", {})
-        required = set(tool.parameters.get("required", []))
-        return [
-            {
-                "name": name,
-                "type": schema.get("type", "string"),
-                "required": name in required,
-            }
-            for name, schema in props.items()
-        ]
-    return [
-        {
-            "name": p.name,
-            "type": p.type,
-            "required": p.required,
-        }
-        for p in (tool.parameters or [])
-    ]
 
 
 class WorkflowRegistry:
@@ -150,29 +110,13 @@ class WorkflowRegistry:
         """Validate all registered manifests.
 
         Checks:
-        - tool_dependencies reference known ToolDefinition names.
-        - connector_dependencies reference known ToolBinding.connector_id
-          values.
         - No input or output schema field is named org_id, organization_id,
           workspace_id, or workspace (org/workspace are proxy-delegated).
         """
         violations: list[str] = []
 
-        known_tools = {t.name for t in ALL_TOOL_DEFINITIONS}
-        known_connectors = {
-            t.binding.connector_id
-            for t in ALL_TOOL_DEFINITIONS
-            if t.binding is not None
-        }
-
         for wf in self._workflows.values():
             prefix = f"{wf.name}"
-            for dep in wf.tool_dependencies:
-                if dep not in known_tools:
-                    violations.append(f"{prefix}: unknown tool dependency {dep!r}")
-            for dep in wf.connector_dependencies:
-                if dep not in known_connectors:
-                    violations.append(f"{prefix}: unknown connector dependency {dep!r}")
             for field_name in list(wf.input_schema) + list(wf.output_schema):
                 if field_name in _ORG_OR_WORKSPACE_HINTS:
                     violations.append(
@@ -204,16 +148,9 @@ class WorkflowRegistry:
 
 
 def _register_builtin_workflows() -> WorkflowRegistry:
-    """Populate the default registry with manifests for the existing governed
-    connector tool schemas and add Notion / custom HTTP API entries."""
+    """Populate the default registry with the built-in workflow manifests."""
 
     registry = WorkflowRegistry.get_default()
-
-    # Group connector read tools by connector_id so we can derive manifests.
-    connector_tools: dict[str, list[ToolDefinition]] = {}
-    for t in CONNECTOR_READ_TOOL_DEFINITIONS:
-        if t.binding is not None:
-            connector_tools.setdefault(t.binding.connector_id, []).append(t)
 
     manifest_defs: list[WorkflowManifest] = [
         # -- GitHub governed connector -----------------------------------

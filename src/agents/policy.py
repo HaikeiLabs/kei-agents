@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from agents.tool_definitions import Permission, ToolDefinition
+from agents.permissions import Permission
 
 
 class AuthorizationResult(str, Enum):
@@ -59,45 +59,49 @@ class PolicyEngine:
 
     def __init__(self) -> None:
         self._custom_policies: dict[
-            str, Callable[[ToolDefinition, PermissionContext], PolicyDecision]
+            str, Callable[[Permission, PermissionContext], PolicyDecision]
         ] = {}
 
     def evaluate(
         self,
-        tool: ToolDefinition,
+        tool_name: str,
+        permission: Permission,
         context: PermissionContext,
     ) -> PolicyDecision:
         """Evaluate if a tool should be allowed for the given context."""
-        if tool.name in self._custom_policies:
-            return self._custom_policies[tool.name](tool, context)
+        if tool_name in self._custom_policies:
+            return self._custom_policies[tool_name](permission, context)
 
-        if context.has_permission(tool.permission):
+        if context.has_permission(permission):
             return PolicyDecision(
                 result=AuthorizationResult.ALLOW,
-                required_permission=tool.permission,
+                required_permission=permission,
             )
 
         return PolicyDecision(
             result=AuthorizationResult.DENY,
-            reason=f"Missing required permission: {tool.permission.value}",
-            required_permission=tool.permission,
+            reason=f"Missing required permission: {permission.value}",
+            required_permission=permission,
         )
 
     def register_policy(
         self,
         tool_name: str,
-        policy: Callable[[ToolDefinition, PermissionContext], PolicyDecision],
+        policy: Callable[[Permission, PermissionContext], PolicyDecision],
     ) -> None:
         """Register a custom policy for a specific tool."""
         self._custom_policies[tool_name] = policy
 
     def evaluate_many(
         self,
-        tools: list[ToolDefinition],
+        tools: dict[str, Permission],
         context: PermissionContext,
     ) -> dict[str, PolicyDecision]:
         """Evaluate multiple tools at once."""
-        return {tool.name: self.evaluate(tool, context) for tool in tools}
+        return {
+            name: self.evaluate(name, permission, context)
+            for name, permission in tools.items()
+        }
 
 
 def create_user_context(
@@ -145,24 +149,25 @@ def set_policy_engine(engine: PolicyEngine) -> None:
 
 
 def check_tool_access(
-    tool: ToolDefinition,
+    tool_name: str,
+    permission: Permission,
     context: PermissionContext,
 ) -> PolicyDecision:
     """Check if a tool can be accessed with the given context."""
-    return get_policy_engine().evaluate(tool, context)
+    return get_policy_engine().evaluate(tool_name, permission, context)
 
 
 def filter_accessible_tools(
-    tools: list[ToolDefinition],
+    tools: dict[str, Permission],
     context: PermissionContext,
-) -> list[ToolDefinition]:
-    """Filter tools to only those accessible with the given context."""
+) -> dict[str, Permission]:
+    """Filter a name-to-permission map using local permission context."""
     engine = get_policy_engine()
-    return [
-        tool
-        for tool in tools
-        if engine.evaluate(tool, context).result == AuthorizationResult.ALLOW
-    ]
+    return {
+        name: permission
+        for name, permission in tools.items()
+        if engine.evaluate(name, permission, context).result == AuthorizationResult.ALLOW
+    }
 
 
 __all__ = [

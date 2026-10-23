@@ -1,35 +1,21 @@
 # Kei Agents
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/HaikeiLabs/kei-agents/actions/workflows/tests.yaml/badge.svg)](https://github.com/HaikeiLabs/kei-agents/actions/workflows/tests.yaml)
-[![Dependency Review](https://github.com/HaikeiLabs/kei-agents/actions/workflows/security.yaml/badge.svg)](https://github.com/HaikeiLabs/kei-agents/actions/workflows/security.yaml)
-
-Agent definitions, tools, and prompts for the Kei AI platform.
+Agent identity, permission, action adapter, and workflow metadata for the Kei
+platform.
 
 ## Architecture
 
-This repository defines agent capabilities/tool schemas and semantic mappings
-only. Provider execution and customer data retrieval happen in the
-tenant-side distributed proxy; Kei is a metadata catalog and ABAC is a policy
-decision point.
+This repository contains no provider clients, credentials, connector bindings,
+or tool-definition catalogs. The canonical tool definitions are the read-only
+contract files in `kei-connector-contracts/schemas/*.tool-definition.v1.json`.
+Kei infers available tool names at call time through Agentware and the
+tenant-side `kei-proxy`.
 
-- **Tool schemas and semantic mappings**: This repository owns agent
-  capabilities, tool definitions, and semantic mappings between them.
-- **Connector bindings are non-secret routing metadata**: Bindings reference
-  credentials and endpoints by opaque identifiers; they never carry credential
-  material.
-- **Provider execution is tenant-side**: Provider execution and customer data
-  retrieval happen in the tenant-side distributed proxy, never in Kei or ABAC.
-- **ABAC is metadata/policy only**: ABAC receives metadata/policy requests
-  only and never customer payloads, results, or credentials.
-- **Writes are agent action tools**: GitHub, CRM, and Linear writes are agent
-  action tools executed by the agent harness, not ABAC connector capabilities.
-  Google Drive doc writes are harness-side action tools that run with the
-  user's own OAuth token (see [docs/drive-write.md](docs/drive-write.md)).
-
-Do not add provider clients or credential resolution to this repository. This
-is a docs-only repository; see [CONTRIBUTING.md](CONTRIBUTING.md) and
-[AGENTS.md](AGENTS.md).
+Provider execution and customer data retrieval happen in the tenant-side
+distributed proxy. ABAC handles metadata and policy decisions only; it never
+receives customer payloads, results, or credentials. GitHub, CRM, and Linear
+writes are agent action tools. Google Drive document writes use the harness and
+the invoking user's OAuth token.
 
 ## Installation
 
@@ -37,168 +23,30 @@ is a docs-only repository; see [CONTRIBUTING.md](CONTRIBUTING.md) and
 pip install kei-agents
 ```
 
-> **Note**: PyPI publication is planned. See the [PyPI Distribution Plan](docs/pypi-distribution-plan.md) for the release timeline.
+PyPI publication is planned. See [the distribution plan](docs/pypi-distribution-plan.md).
 
-## Quick Start
+## Package capabilities
 
-```python
-from agents import TOOL_DEFINITIONS, render_tools, ModelFormat
+- Agent identity, permissions, and system prompts
+- Workflow manifests and workflow behavior
+- CRM, GitHub, and Google Drive action implementations
+- Local policy evaluation helpers
 
-# Get tools in OpenAI format
-tools = render_tools(TOOL_DEFINITIONS, ModelFormat.OPENAI)
+See [the connector architecture](docs/connector-tool-schemas.md) and
+[Google Drive write flow](docs/drive-write.md).
 
-# Or detect automatically from model name
-tools = render_tools(TOOL_DEFINITIONS, "gpt-4")
-```
+## Opt-in GitHub fix action
 
-## Features
+`GITHUB_FIX_ACTION_TOOL` (`github.create_fix_pr`) is a harness-defined action
+with a `Permission.GITHUB_WRITE` gate. It is available only to the dedicated
+fix-proposal agent after an explicit user request. The server selects the
+repository and branch, validates the unified diff, and controls draft status;
+the action has no repository, branch, shell, or credential arguments.
 
-- **Multi-model support**: OpenAI, Anthropic, Ollama, Llama, vLLM
-- **Tool definitions**: Pre-built tool schemas for common operations
-- **Permission-based access**: Tools gated by permissions
-- **Category organization**: Tools organized by category
+## Additional harness agents
 
-## Available Tools
+- `bug_report_triage`: read-only diagnosis of sanitized BugBot reports.
+- `fix_proposal`: bounded draft fixes through the opt-in GitHub action.
 
-| Tool | Description | Permission |
-|------|-------------|------------|
-| search_wiki | Search conversation history | search_wiki |
-| web_search | Search the web for current info | web_search |
-| schedule_meeting | Schedule calendar meetings | schedule_meetings |
-| list_prs | List GitHub pull requests | github_read |
-| list_issues | List GitHub issues | github_read |
-| create_issue | Create GitHub issues | github_write |
-| get_workflow_status | Get CI/CD workflow status | github_read |
-| create_pull_request | Open a GitHub pull request from an existing branch. Use it when the user says the work is on a branch and asks for a PR; call it directly, without reading the linked issue first | github_write |
-| start_game | Start interactive games | search_wiki |
-| drive_create_doc | Create a Google Doc from Markdown in a Drive folder (harness-side, confirm-required) | drive_write |
-| drive_update_doc | Replace a Google Doc's content with Markdown (harness-side, confirm-required) | drive_write |
-
-See `src/agents/tool_definitions.py` for the default tool list.
-
-#### Opt-in GitHub fix action
-
-`GITHUB_FIX_ACTION_TOOL` (`github.create_fix_pr`) is intentionally excluded from
-`TOOL_DEFINITIONS` and `ALL_TOOL_DEFINITIONS`. Only a dedicated fix-proposal
-agent may render it after an explicit user request. It requires
-`Permission.GITHUB_WRITE`; the harness owns the repository, branch, and draft
-status, and validates the unified diff before any provider write. The schema
-contains no repository, branch, base, shell, or credential arguments. This
-repository defines only the action schema; the Discord harness implements the
-provider call and Kei policy gate.
-
-### Governed Connector Read Schemas
-
-Provider-neutral, schema-only read capabilities for governed connectors
-(GitHub, Linear, Google Drive/Docs, S3, http_api/CRM, Gmail, Tito). Each schema expresses a
-capability/resource/action binding and a delegated-context contract; it carries
-no credentials, arbitrary URLs, tenant identifiers, or handlers — execution is
-delegated to the tenant-side distributed proxy. See
-[docs/connector-tool-schemas.md](docs/connector-tool-schemas.md).
-
-| Tool | Connector | Resource | Permission |
-|------|-----------|----------|------------|
-| github.get_repository | github | repository | github_read |
-| github.get_issue | github | issues | github_read |
-| github.get_pull_request | github | pull_requests | github_read |
-| linear.list_issues | linear | issues | linear_read |
-| linear.get_issue | linear | issues | linear_read |
-| linear.list_projects | linear | projects | linear_read |
-| drive.list_files | drive | files | drive_read |
-| drive.get_file | drive | files | drive_read |
-| docs.get_document | drive | documents | drive_read |
-| s3.list_objects | s3 | objects | s3_read |
-| s3.get_object | s3 | objects | s3_read |
-| s3.get_object_metadata | s3 | objects | s3_read |
-| http_api.list_records | http_api | records | http_api_read |
-| http_api.get_record | http_api | records | http_api_read |
-| gmail.search_messages | gmail | messages | gmail_read |
-| gmail.get_message | gmail | messages | gmail_read |
-| tito.list_events | tito | events | tito_read |
-| tito.get_event | tito | events | tito_read |
-| tito.list_releases | tito | releases | tito_read |
-| tito.get_ticket_summary | tito | tickets | tito_read |
-
-### Harness Agent Definitions
-
-`agents.agent_definitions` declares each harness agent's grant surface as data:
-typed `Permission` members and the catalog tools it exposes.
-`validate_agent_definitions` rejects bare-string permissions, unknown tools,
-tools whose permission is not granted, and any `*_approve` permission (reserved).
-
-| Agent | Harness | Permissions |
-|-------|---------|-------------|
-| `pde_search_agent` | `pde` | `drive_read`, `notion_read`, `gmail_read`, `tito_read` |
-| `pedro` | `discord` | `github_read`, `github_write`, `crm_read`, `crm_write`, `linear_read`, `linear_write`, `drive_read`, `fundraising_read`, `fundraising_write`, `finance_read`, `finance_write` |
-| `onboarding_e2e_triage` | `discord` | `github_read` |
-| `bug_report_triage` | `discord` | `github_read` |
-| `fix_proposal` | `discord` | `github_read`, `github_write` (harness-defined opt-in action only) |
-
-The triage agents use harness-defined, read-only source tools rather than the
-catalog connector tool list. `fix_proposal` is a separate logical agent; its
-write capability is still subject to the invoking human's Kei policy on the
-exact registered action. It does not add the fix action to Pedro's default
-model tools.
-
-### Fundraising Workflow Spec
-
-`agents.workflows.fundraising` is a harness-neutral fundraising spec. The
-investor pipeline is `prospect → contacted → meeting → diligence → committed`,
-and any open stage can move to `passed`. There are three canonical workflows:
-`fundraising.investor_outreach`, `fundraising.data_room_share`, and
-`fundraising.investor_decision`. Each one reads from CRM or the Drive data room
-first, then places every data-room share, stage change, Linear follow-up, and
-notification.
-`validate_fundraising_workflow` checks the spec structure; see
-[docs/workflow-validation.md](docs/workflow-validation.md).
-
-## Development
-
-```bash
-# Clone repository
-git clone https://github.com/HaikeiLabs/kei-agents.git
-cd kei-agents
-
-# Install dev dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Lint
-ruff check .
-
-# Type check
-mypy src/agents
-```
-
-## Security
-
-- Dependency vulnerabilities scanned weekly via `pip-audit`
-- Dependency review on all PRs
-- See [Security Policy](SECURITY.md)
-
-## Distribution
-
-For details on PyPI distribution, release process, and container registry strategy, see the [PyPI Distribution Plan](docs/pypi-distribution-plan.md).
-
-## Contributing
-
-Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-All contributors must be approved by existing maintainers. See [CONTRIBUTORS](CONTRIBUTORS).
-
-### Design Documents
-
-- [Harness-side Drive Writes](docs/drive-write.md) - `drive_create_doc`/`drive_update_doc`: user OAuth (`drive.file`), confirm-required preview, `drive:folder/<id>` / `drive:doc/<id>` authorize resources
-- [Workflow Spec Validation](docs/workflow-validation.md) - structural rules `validate_read_first` enforces: cycles, reachability-based approval gates, typed permissions, egress classification
-- [npm Distribution Strategy](docs/npm-distribution-strategy.md) - proposal for publishing a JS/TypeScript consumable, plus Go distribution as a separate workstream (not approved)
-
-## License
-
-MIT License - see [LICENSE](LICENSE).
-
-## Links
-
-- [GitHub](https://github.com/HaikeiLabs/kei-agents)
-- [Issues](https://github.com/HaikeiLabs/kei-agents/issues)
+Both definitions are metadata; the harness supplies their prompts and routes
+actions, while Kei evaluates permission metadata at call time.

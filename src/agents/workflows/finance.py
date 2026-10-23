@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Literal
 
-from agents.tool_definitions import Permission
+from agents.permissions import Permission
 from agents.workflows.step_graph import validate_step_graph
 
 

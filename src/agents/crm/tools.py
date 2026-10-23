@@ -17,12 +17,6 @@ from agents.crm import (
     LeadStatus,
     UpdateLeadInput,
 )
-from agents.tool_definitions import (
-    Permission,
-    ToolCategory,
-    ToolDefinition,
-    ToolParameter,
-)
 
 _crm_adapter_instance: CRMAdapter | None = None
 
@@ -248,146 +242,9 @@ def crm_update_lead(
     }
 
 
-CRM_TOOL_DEFINITIONS: list[ToolDefinition] = [
-    ToolDefinition(
-        name="crm_lookup_lead",
-        description="Look up a lead by ID or email address",
-        parameters=[
-            ToolParameter(
-                name="lead_id",
-                description="The unique identifier of the lead",
-                required=False,
-            ),
-            ToolParameter(
-                name="email",
-                description="The email address of the lead",
-                required=False,
-            ),
-        ],
-        permission=Permission.CRM_READ,
-        category=ToolCategory.CRM,
-        handler=crm_lookup_lead,
-    ),
-    ToolDefinition(
-        name="crm_list_leads",
-        description="List leads with optional filtering by status",
-        parameters=[
-            ToolParameter(
-                name="status",
-                description="Filter by lead status (new, contacted, qualified, proposal, won, lost)",
-                required=False,
-                enum=["new", "contacted", "qualified", "proposal", "won", "lost"],
-            ),
-            ToolParameter(
-                name="limit",
-                description="Maximum number of leads to return",
-                type="integer",
-                required=False,
-                default=100,
-            ),
-            ToolParameter(
-                name="offset",
-                description="Number of leads to skip",
-                type="integer",
-                required=False,
-                default=0,
-            ),
-        ],
-        permission=Permission.CRM_READ,
-        category=ToolCategory.CRM,
-        handler=crm_list_leads,
-    ),
-    ToolDefinition(
-        name="crm_create_lead",
-        description="Create a new lead in the CRM",
-        parameters=[
-            ToolParameter(
-                name="email",
-                description="Email address of the lead (required)",
-                required=True,
-            ),
-            ToolParameter(
-                name="name",
-                description="Full name of the lead (required)",
-                required=True,
-            ),
-            ToolParameter(
-                name="company",
-                description="Company name",
-                required=False,
-            ),
-            ToolParameter(
-                name="phone",
-                description="Phone number",
-                required=False,
-            ),
-            ToolParameter(
-                name="source",
-                description="Lead source",
-                required=False,
-                enum=["web", "referral", "cold_call", "event", "other"],
-                default="other",
-            ),
-            ToolParameter(
-                name="notes",
-                description="Additional notes about the lead",
-                required=False,
-            ),
-        ],
-        permission=Permission.CRM_WRITE,
-        category=ToolCategory.CRM,
-        handler=crm_create_lead,
-    ),
-    ToolDefinition(
-        name="crm_update_lead",
-        description="Update an existing lead in the CRM",
-        parameters=[
-            ToolParameter(
-                name="lead_id",
-                description="The unique identifier of the lead to update",
-                required=True,
-            ),
-            ToolParameter(
-                name="email",
-                description="New email address",
-                required=False,
-            ),
-            ToolParameter(
-                name="name",
-                description="New name",
-                required=False,
-            ),
-            ToolParameter(
-                name="company",
-                description="New company name",
-                required=False,
-            ),
-            ToolParameter(
-                name="phone",
-                description="New phone number",
-                required=False,
-            ),
-            ToolParameter(
-                name="status",
-                description="New status",
-                required=False,
-                enum=["new", "contacted", "qualified", "proposal", "won", "lost"],
-            ),
-            ToolParameter(
-                name="notes",
-                description="Updated notes",
-                required=False,
-            ),
-        ],
-        permission=Permission.CRM_WRITE,
-        category=ToolCategory.CRM,
-        handler=crm_update_lead,
-    ),
-]
 
 
 __all__ = [
-    "CRM_TOOL_DEFINITIONS",
     "crm_create_lead",
     "crm_list_leads",
     "crm_lookup_lead",

@@ -2,12 +2,11 @@
 
 ## Release gate
 
-Every tool introduced by PR #18 must be either registered in the canonical
-agent/tool schema and reachable through the Kei proxy for policy evaluation, or
-explicitly denied and quarantined. A merged pull request and passing local
-schema tests are not evidence of governance.
+Every tool introduced by PR #18 must be either defined in the canonical
+contract repository and reachable through the Kei proxy for policy evaluation, or
+explicitly denied and quarantined. A merged pull request and passing local tests are not evidence of governance.
 
-Registered tools must be discoverable from the package catalog, exposed by the
+Registered tools must be inferred by Kei at call time and exposed by the
 Discord harness, mapped to a canonical capability/resource, evaluated by the
 proxy PEP, scoped by the authenticated organization/workspace, and covered by
 allow/deny, redaction, audit, idempotency, and synthetic-provider tests.
@@ -34,7 +33,7 @@ capability `issue.create`; it is not a credential-bearing connector schema.
 ## End-to-end contract
 
 ```text
-Discord message -> canonical tool catalog -> harness exposure
+Discord message -> Kei runtime tool inference -> harness exposure
   -> tenant-side Kei proxy PEP -> local policy/ABAC decision
   -> tenant-side CRM or Linear adapter -> redacted result and audit event
 ```
@@ -51,7 +50,7 @@ redaction violations fail closed.
 
 ## Required evidence
 
-- canonical registration and Discord exposure tests;
+- contract registration and Discord exposure tests;
 - proxy reachability and local policy allow/deny tests;
 - organization/workspace isolation tests;
 - consent and approval tests;

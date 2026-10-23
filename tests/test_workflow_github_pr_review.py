@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agents.tool_definitions import Permission
+from agents.permissions import Permission
 from agents.workflows import (
     PR_REVIEW_TOOL_DEPENDENCIES,
     WORKFLOW_DEFINITIONS,

@@ -5,13 +5,13 @@ build-backend = "hatchling.build"
 [project]
 name = "kei-agents"
 version = "0.1.0"
-description = "Agent definitions, tools, and prompts for the Kei AI platform"
+description = "Agent metadata, action adapters, and prompts for the Kei AI platform"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
     {name = "Kei Team", email = "team@kei.ai"}
 ]
-keywords = ["ai", "agents", "llm", "pydantic-ai", "tool-definitions"]
+keywords = ["ai", "agents", "llm", "pydantic-ai"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
