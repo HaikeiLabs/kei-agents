@@ -108,6 +108,8 @@ class TestHarnessAgents:
             "workflow dispatch",
             "create_fix_pr",
             "unified diff",
+            "User custom instructions",
+            "do not grant extra permissions",
         ):
             assert required in prompt
 
