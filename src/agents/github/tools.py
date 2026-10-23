@@ -19,7 +19,7 @@ from agents.tool_definitions import (
 )
 
 GITHUB_FIX_ACTION_TOOL = ToolDefinition(
-    name="github.create_fix_pull_request",
+    name="github.create_fix_pr",
     description=(
         "Propose a pull-request fix for the server-selected repository and branch. "
         "Provide a concise title, a PR description, and a unified diff of at most "

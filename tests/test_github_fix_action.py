@@ -16,6 +16,7 @@ from agents.github.tools import GITHUB_TOOL_DEFINITIONS
 
 def test_fix_action_has_scoped_github_write_schema() -> None:
     tool = GITHUB_FIX_ACTION_TOOL
+    assert tool.name == "github.create_fix_pr"
     assert tool in GITHUB_FIX_ACTION_TOOL_DEFINITIONS
     assert tool.permission == Permission.GITHUB_WRITE
     assert tool.category == ToolCategory.GITHUB
