@@ -229,7 +229,7 @@ BUG_TO_LINEAR_PR = WorkflowSpec(
         _STEP_GITHUB_PR,
     ],
     tags=["bug", "linear", "github"],
-    principal=WorkflowPrincipal("pedro-bug-intake"),
+    principal=WorkflowPrincipal("kei-bug-intake"),
 )
 
 

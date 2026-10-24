@@ -193,11 +193,11 @@ class TestWorkflowPrincipal:
         spec = WorkflowSpec(
             name="test",
             description="test",
-            principal=WorkflowPrincipal("pedro-bug-intake"),
+            principal=WorkflowPrincipal("kei-bug-intake"),
         )
-        assert spec.principal.value == "pedro-bug-intake"
-        assert asdict(spec)["principal"] == {"value": "pedro-bug-intake"}
-        assert BUG_TO_LINEAR_PR.principal.value == "pedro-bug-intake"
+        assert spec.principal.value == "kei-bug-intake"
+        assert asdict(spec)["principal"] == {"value": "kei-bug-intake"}
+        assert BUG_TO_LINEAR_PR.principal.value == "kei-bug-intake"
 
     @pytest.mark.parametrize("name", ["", "a", "Upper", "bad_name", "-bad", "a" * 49])
     def test_invalid_service_principal_name_is_rejected(self, name: str) -> None:

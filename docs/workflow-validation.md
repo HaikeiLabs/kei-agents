@@ -17,7 +17,7 @@ pipeline transition (`<id>: invalid stage transition prospect -> committed`).
 for a workflow invocation. It defaults to `WorkflowPrincipal("invoker")`,
 which preserves the existing caller identity. A workflow that runs under an
 organization-managed service principal declares its name instead, for example
-`WorkflowPrincipal("pedro-bug-intake")` on `BUG_TO_LINEAR_PR`. Names are
+`WorkflowPrincipal("kei-bug-intake")` on `BUG_TO_LINEAR_PR`. Names are
 validated at construction against the identity service's
 `^[a-z][a-z0-9-]{1,47}$` format. This is metadata for the harness to select a
 runtime session; it does not open sessions, grant access, or change policy.
