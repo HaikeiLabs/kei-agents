@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from agents.tool_definitions import Permission
+from agents.permissions import Permission
 
 
 class PRReviewStep(str, Enum):

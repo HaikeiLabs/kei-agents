@@ -1,4 +1,4 @@
-"""Tests for the exported eval suites (EV-C1 agentware.eval-suite.v1)."""
+"""Tests for exported Agentware eval suites."""
 
 from __future__ import annotations
 
@@ -10,18 +10,12 @@ from typing import Any
 
 import pytest
 
-from agents import ALL_TOOL_DEFINITIONS, Permission
 from agents.evals import EVAL_TARGETS, SCHEMA_ID, validate_suite
 from agents.evals.export import build_suites, check_suites, main, render_suite
 from agents.evals.targets import AGENT_TARGETS, WORKFLOW_TARGETS
-from agents.workflows.bug_to_linear_pr import FILE_BUG_TOOL, LINEAR_CREATE_ISSUE_TOOL
 
 SUITES_DIR = Path(__file__).resolve().parent.parent / "evals" / "suites"
 RESULTS_DIR = SUITES_DIR.parent / "results"
-MIN_CASES = {"pedro": 20, "pde_search_agent": 12}
-MIN_WORKFLOW_CASES = 5
-# Proxy-delegated scoping keys every suite must assert are never arguments.
-DELEGATED = {"tenant_id", "workspace", "repository", "drive_id", "mailbox", "account"}
 
 
 def _committed() -> dict[str, dict[str, Any]]:
@@ -37,6 +31,12 @@ class TestExporter:
         assert len(AGENT_TARGETS) == 2
         assert len(WORKFLOW_TARGETS) == 8
 
+    def test_suites_rely_on_runtime_tool_inference(self) -> None:
+        for suite in build_suites().values():
+            assert suite["tools"] == []
+            assert suite["cases"]
+            assert all(case["expect"].get("tool") is None for case in suite["cases"])
+
     def test_byte_stable(self) -> None:
         first = {name: render_suite(s) for name, s in build_suites().items()}
         second = {name: render_suite(s) for name, s in build_suites().items()}
@@ -49,24 +49,13 @@ class TestExporter:
             assert path.read_bytes() == (tmp_path / "b" / path.name).read_bytes()
 
     def test_committed_suites_are_current(self) -> None:
-        assert check_suites(SUITES_DIR) == [], (
-            "run: python -m agents.evals.export --out evals/suites"
-        )
+        assert check_suites(SUITES_DIR) == []
         assert main(["--check", "--out", str(SUITES_DIR)]) == 0
 
     def test_check_flags_stale_suite(self, tmp_path: Path) -> None:
         main(["--out", str(tmp_path)])
         (tmp_path / "pedro.json").write_text("{}\n")
         assert main(["--check", "--out", str(tmp_path)]) == 1
-
-    def test_tools_are_openai_rendered_catalog_tools(self) -> None:
-        catalog = {t.name for t in ALL_TOOL_DEFINITIONS}
-        for target in EVAL_TARGETS:
-            suite = build_suites()[f"{target.name}.json"]
-            names = [t["function"]["name"] for t in suite["tools"]]
-            assert names == list(target.tools)
-            assert set(names) <= catalog
-            assert all(t["type"] == "function" for t in suite["tools"])
 
 
 @pytest.mark.parametrize("name", sorted(build_suites()))
@@ -76,29 +65,17 @@ class TestCommittedSuite:
         assert suite["schema"] == SCHEMA_ID
         assert validate_suite(suite) == []
 
-    def test_case_count(self, name: str) -> None:
-        stem = name.removesuffix(".json")
-        cases = _committed()[name]["cases"]
-        assert len(cases) >= MIN_CASES.get(stem, MIN_WORKFLOW_CASES)
-
-    def test_covers_every_case_category(self, name: str) -> None:
-        expects = [c["expect"] for c in _committed()[name]["cases"]]
-        assert any(
-            isinstance(e.get("tool"), str) and not e.get("deny") for e in expects
-        ), "tool selection"
-        assert any(e.get("args") for e in expects), "argument semantics"
-        assert any(DELEGATED & set(e.get("forbidden_arg_keys", [])) for e in expects), (
-            "delegated keys"
-        )
-        assert any("tool" in e and e["tool"] is None for e in expects), "no-tool answer"
-        assert any(e.get("deny") for e in expects), "deny"
+    def test_cases_are_no_tool_cases(self, name: str) -> None:
+        suite = _committed()[name]
+        assert suite["tools"] == []
+        assert suite["cases"]
+        assert all(case["expect"].get("tool") is None for case in suite["cases"])
 
     def test_no_endpoint_addresses(self, name: str) -> None:
         assert _endpoint_leaks((SUITES_DIR / name).read_text()) == []
 
 
 def _endpoint_leaks(text: str) -> list[str]:
-    """Private endpoints must never reach a public repo (IPs, URLs, tailnet hosts)."""
     leaks = re.findall(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", text)
     leaks += re.findall(r"\bhttps?://\S+", text)
     leaks += re.findall(r"[\w.-]+\.ts\.net\b", text, re.IGNORECASE)
@@ -117,25 +94,12 @@ def test_committed_results_have_no_endpoint_addresses(path: Path) -> None:
     assert _endpoint_leaks(path.read_text()) == []
 
 
-def test_pedro_default_group_deny_cases() -> None:
-    suite = _committed()["pedro.json"]
-    deny = [c for c in suite["cases"] if c["expect"].get("deny")]
-    assert deny
-    for c in deny:
-        assert c["context"]["allowed_tools"] == [
-            "file_bug",
-            "search_wiki",
-            "web_search",
-        ]
-
-
 def _valid_suite() -> dict[str, Any]:
     return copy.deepcopy(build_suites()["bug_to_linear_pr.json"])
 
 
 def _first_case(suite: dict[str, Any]) -> dict[str, Any]:
-    case: dict[str, Any] = suite["cases"][0]
-    return case
+    return suite["cases"][0]
 
 
 class TestValidator:
@@ -159,54 +123,12 @@ class TestValidator:
             (lambda s: _first_case(s).update(id="Bad Id"), "must match"),
             (lambda s: _first_case(s).update(note="x"), "unknown key 'note'"),
             (
-                lambda s: _first_case(s)["expect"].update(tool="nope"),
-                "not in the suite",
-            ),
-            (
-                lambda s: _first_case(s)["expect"].update(tool=None),
-                "need an expected tool",
-            ),
-            (
-                lambda s: _first_case(s)["expect"].update(args={"bogus": 1}),
-                "not declared",
-            ),
-            (
-                lambda s: _first_case(s)["expect"].update(args={"priority": "p0"}),
-                "not one of",
-            ),
-            (
-                lambda s: _first_case(s)["expect"].update(
-                    forbidden_arg_keys=["team_key"]
-                ),
-                "schema-required",
-            ),
-            (
-                lambda s: _first_case(s)["expect"].update(
-                    forbidden_tools=["linear.create_issue"]
-                ),
-                "both expected",
-            ),
-            (
-                lambda s: _first_case(s)["expect"].update(deny=True),
-                "need context.allowed_tools",
-            ),
-            (
                 lambda s: _first_case(s)["expect"].update(content={"regex": ["("]}),
                 "does not compile",
             ),
             (
                 lambda s: _first_case(s)["expect"].update(content={"maybe": ["x"]}),
                 "unknown key 'maybe'",
-            ),
-            (
-                lambda s: _first_case(s)["context"].update(
-                    allowed_tools=["linear.get_issue"]
-                ),
-                "would be denied",
-            ),
-            (
-                lambda s: _first_case(s)["context"].update(allowed_tools=["ghost"]),
-                "not in the suite",
             ),
         ],
     )
@@ -215,30 +137,3 @@ class TestValidator:
         mutate(suite)
         violations = validate_suite(suite)
         assert any(message in v for v in violations), violations
-
-    def test_deny_case_cannot_expect_an_allowed_tool(self) -> None:
-        suite = _valid_suite()
-        deny = next(c for c in suite["cases"] if c["expect"].get("deny"))
-        deny["context"]["allowed_tools"].append(deny["expect"]["tool"])
-        assert any("expects allowed tool" in v for v in validate_suite(suite))
-
-
-class TestBugToLinearPrTools:
-    @pytest.mark.parametrize("tool", [FILE_BUG_TOOL, LINEAR_CREATE_ISSUE_TOOL])
-    def test_linear_write_action_tool(self, tool: Any) -> None:
-        assert tool.permission is Permission.LINEAR_WRITE
-        assert tool.binding is None and tool.handler is None
-        params = {p.name: p for p in tool.parameters}
-        # Semantics rule: an issue carries its parent team; the workspace is
-        # proxy-delegated and never an argument.
-        assert params["team_key"].required
-        assert not DELEGATED & set(params)
-
-    def test_workflow_connector_refs_resolve(self) -> None:
-        from agents.workflows.bug_to_linear_pr import (
-            BUG_TO_LINEAR_PR,
-            validate_workflow,
-        )
-
-        names = {t.name for t in ALL_TOOL_DEFINITIONS}
-        assert validate_workflow(BUG_TO_LINEAR_PR, names) == []

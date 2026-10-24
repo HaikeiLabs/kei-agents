@@ -25,8 +25,9 @@ Instructions for coding agents working in this repository.
 
 ## Architecture invariants
 
-- This repository defines agent capabilities/tool schemas and semantic
-  mappings only.
+- This repository defines agent metadata and semantic mappings only. Canonical
+  tool definitions live in `kei-connector-contracts/schemas/*.tool-definition.v1.json`;
+  Kei infers tool names at call time.
 - Connector bindings are non-secret routing metadata.
 - Provider execution and customer data retrieval happen in the tenant-side
   distributed proxy.

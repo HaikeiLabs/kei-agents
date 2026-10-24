@@ -9,13 +9,6 @@ from typing import Any
 
 import pytest
 
-from agents import (
-    ALL_TOOL_DEFINITIONS,
-    DRIVE_WRITE_TOOL_DEFINITIONS,
-    Permission,
-    ToolCategory,
-    validate_tool_definitions,
-)
 from agents.drive_write import (
     DRIVE_FILE_SCOPE,
     GOOGLE_DOC_MIME_TYPE,
@@ -64,32 +57,6 @@ def _commit(preview: Any, http: FakeHTTP, **kwargs: Any) -> dict[str, Any]:
     kwargs.setdefault("confirmation", preview.digest)
     kwargs.setdefault("access_token", TOKEN)
     return commit_drive_write(preview, http=http, **kwargs)
-
-
-class TestToolDefinitions:
-    def test_registered_and_valid(self) -> None:
-        names = {t.name for t in ALL_TOOL_DEFINITIONS}
-        assert {"drive_create_doc", "drive_update_doc"} <= names
-        assert validate_tool_definitions(ALL_TOOL_DEFINITIONS) == []
-
-    @pytest.mark.parametrize("tool", DRIVE_WRITE_TOOL_DEFINITIONS, ids=lambda t: t.name)
-    def test_action_tool_not_connector_capability(self, tool: Any) -> None:
-        assert tool.permission is Permission.DRIVE_WRITE
-        assert tool.category is ToolCategory.DRIVE
-        assert tool.service == "drive"
-        assert tool.binding is None and tool.handler is None
-        assert "confirm-required" in tool.tags
-        assert not DELEGATED & {p.name for p in tool.parameters}
-
-    def test_create_carries_parent_folder(self) -> None:
-        params = {p.name: p for p in DRIVE_WRITE_TOOL_DEFINITIONS[0].parameters}
-        assert params["folder_id"].required
-        assert params["title"].required and params["markdown"].required
-
-    def test_update_targets_doc(self) -> None:
-        params = {p.name: p for p in DRIVE_WRITE_TOOL_DEFINITIONS[1].parameters}
-        assert set(params) == {"doc_id", "markdown"}
-        assert all(p.required for p in params.values())
 
 
 class TestPreview:

@@ -10,7 +10,6 @@ Drive write capability.
 
 | Piece | Where it lives |
 | --- | --- |
-| Tool definitions (`DRIVE_WRITE_TOOL_DEFINITIONS`) | `agents.drive_write.tools`, part of `ALL_TOOL_DEFINITIONS` |
 | Preview, confirmation digest, authorize resource, request shape | `agents.drive_write` |
 | HTTP transport | the harness (`DriveHTTPClient` protocol) |
 | User's OAuth access token (`drive.file`) | the harness context; never stored here |
@@ -84,15 +83,3 @@ result = commit_drive_write(
 
 Coding harnesses (Claude Code, Codex) use the curl recipe in the
 `google-drive-connector` skill instead.
-
-## Evals
-
-`evals/suites/drive_publish.json` (target `drive_publish`) covers:
-
-- a create with `folder_id` present;
-- an update that must not create a new doc;
-- a find before an update;
-- no tool when the folder is missing;
-- explaining the confirm step;
-- two deny cases (an unconfirmed or read-only write must be denied, and the
-  reply must not claim the doc was written).

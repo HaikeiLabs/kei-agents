@@ -1,72 +1,15 @@
-# Governed Connector Read Tool Schemas
+# Connector tool definitions
 
-Provider-neutral, schema-only read capabilities for governed connectors. These
-schemas are agent capabilities: they describe *what* an agent may read and the
-governance contract around it. They are **not** provider clients and never
-resolve credentials. Provider execution and customer data retrieval happen in
-the tenant-side distributed proxy; Kei is a metadata catalog and ABAC is a
-policy decision point only.
+The canonical tool-definition format is owned by
+`kei-connector-contracts/schemas/*.tool-definition.v1.json`. This repository
+does not define or copy those schemas and does not contain provider clients,
+credential resolution, or connector bindings.
 
-## Design principles
+Kei infers available tool names at call time through Agentware and the
+tenant-side `kei-proxy`. Provider execution and customer data retrieval stay
+inside that tenant-side proxy. ABAC receives policy metadata only; it never
+receives customer payloads, results, or credentials.
 
-Each governed connector read schema expresses four things:
-
-1. **Capability binding** — a `Permission` gate (e.g. `linear_read`) and a
-   `ToolCategory` organize the capability and drive ABAC policy decisions.
-2. **Resource binding** — the `ToolBinding.config.resource` field names the
-   bound resource type (`repository`, `issues`, `objects`, `records`, ...).
-   The resource scope is governed routing metadata, not an agent parameter.
-3. **Action binding** — the tool `name` and `description` are the action
-   (list/get). Reads are the only connector capabilities here; writes remain
-   agent action tools, never connector capabilities.
-4. **Delegated context** — `ToolBinding.delegated_context` lists the non-secret
-   field names the tenant-side proxy supplies at invocation (tenant/resource/
-   region scoping). The agent never provides them, so they must not appear as
-   tool parameters.
-
-## Hard invariants (enforced by `validate_tool_definitions`)
-
-- **No provider credentials** — binding config keys/values that look like
-  secrets are rejected.
-- **No arbitrary URLs** — binding config keys that look like endpoints
-  (`url`, `endpoint`, `base_url`, `host`, ...) and any string value containing
-  `://` are rejected. Endpoints are resolved from the governed connection
-  preset (`abac.connection_presets`), never embedded.
-- **No tenant IDs chosen by the agent** — a parameter that collides with a
-  `delegated_context` field, or that looks like a tenant identifier
-  (`tenant_id`, `account_id`, `customer_id`, `organization_id`, `org_id`), is
-  rejected on governed connector read tools.
-- **No direct provider calls** — governed connector read tools (a `*_read`
-  permission with a binding) must not declare a `handler`; execution is
-  delegated to the tenant-side proxy. They must also declare a `service`.
-
-## Covered connectors
-
-| Connector | Permission | Category | Read schemas | Delegated context |
-|-----------|-----------|----------|--------------|-------------------|
-| GitHub    | `github_read`   | `github`   | `github.get_repository`, `github.get_issue`, `github.get_pull_request` | `tenant_id`, `repository` |
-| Linear    | `linear_read`   | `linear`   | `linear.list_issues`, `linear.get_issue`, `linear.list_projects` | `tenant_id`, `workspace` |
-| Google Drive/Docs | `drive_read` | `drive` | `drive.list_files`, `drive.get_file`, `docs.get_document` | `tenant_id`, `drive_id` |
-| S3        | `s3_read`       | `s3`       | `s3.list_objects`, `s3.get_object`, `s3.get_object_metadata` | `tenant_id`, `bucket` |
-| http_api/CRM | `http_api_read` | `http_api` | `http_api.list_records`, `http_api.get_record` | `tenant_id` |
-| Gmail     | `gmail_read`    | `gmail`    | `gmail.search_messages`, `gmail.get_message` | `tenant_id`, `mailbox` |
-| Tito      | `tito_read`     | `tito`     | `tito.list_events`, `tito.get_event`, `tito.list_releases`, `tito.get_ticket_summary` | `tenant_id`, `account` |
-
-Gmail reads return message metadata and snippet only; the full body is
-released only when ABAC authorizes the `gmail_include_body` policy attribute,
-so it is never an agent parameter. Tito reads never return attendee PII;
-`tito.get_ticket_summary` is aggregate counts by state/type. Both map to the
-kei-policy-catalog `gmail` (`message.search`, `message.get`) and `tito`
-(`event.list`, `event.get`, `release.list`, `ticket.summary`) capabilities.
-
-`connector_id` values (`conn_github_1`, `conn_linear_1`, ...) are placeholders
-that reference `abac.connection_presets.id`; the tenant-side proxy resolves the
-real preset, endpoint, and credentials at invocation time.
-
-## What is out of scope
-
-- Provider clients, credential resolution, or secret material (docs-only repo).
-- Kei shared connector types, migrations, invocation envelopes, or deployment
-  interfaces — this repo only defines agent capabilities and semantic mappings.
-- Writes: GitHub/CRM/Linear writes remain agent action tools executed by the
-  agent harness, not ABAC connector capabilities.
+GitHub, CRM, and Linear writes are agent action tools rather than connector
+capabilities. See [the Google Drive write flow](drive-write.md) for the
+harness-side Drive action.

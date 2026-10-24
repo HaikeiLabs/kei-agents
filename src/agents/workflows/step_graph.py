@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol
 
-from agents.tool_definitions import Permission
+from agents.permissions import Permission
 
 
 class WorkflowStepLike(Protocol):

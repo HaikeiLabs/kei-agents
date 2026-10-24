@@ -112,7 +112,7 @@ source test-env/bin/activate
 pip install dist/kei-agents-*.whl
 
 # Verify installation
-python -c "from agents import TOOL_DEFINITIONS; print(len(TOOL_DEFINITIONS))"
+python -c "from agents import AgentDefinition, Permission; print(Permission.DRIVE_READ.value)"
 ```
 
 ## PyPI Publishing

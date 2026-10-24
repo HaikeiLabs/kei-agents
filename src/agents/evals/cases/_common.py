@@ -7,7 +7,14 @@ from typing import Any
 Case = dict[str, Any]
 
 # Proxy-delegated scoping (EV-C1 §6): never a tool argument.
-DELEGATED_KEYS = ["tenant_id", "org_id", "workspace", "workspace_id", "repository", "owner"]
+DELEGATED_KEYS = [
+    "tenant_id",
+    "org_id",
+    "workspace",
+    "workspace_id",
+    "repository",
+    "owner",
+]
 DRIVE_DELEGATED_KEYS = ["tenant_id", "drive_id"]
 
 # A denied reply says so; any one of these is enough.

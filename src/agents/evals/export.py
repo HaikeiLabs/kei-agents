@@ -21,20 +21,6 @@ from typing import Any
 from agents.evals.cases import CASES
 from agents.evals.schema import SCHEMA_ID, validate_suite
 from agents.evals.targets import EVAL_TARGETS, EvalTarget
-from agents.tool_definitions import (
-    ALL_TOOL_DEFINITIONS,
-    ModelFormat,
-    ToolDefinition,
-    render_tools,
-)
-
-
-def _catalog_tools(names: tuple[str, ...]) -> list[ToolDefinition]:
-    catalog = {tool.name: tool for tool in ALL_TOOL_DEFINITIONS}
-    missing = [name for name in names if name not in catalog]
-    if missing:
-        raise ValueError(f"tools not in the catalog: {missing}")
-    return [catalog[name] for name in names]
 
 
 def build_suite(target: EvalTarget) -> dict[str, Any]:
@@ -49,7 +35,7 @@ def build_suite(target: EvalTarget) -> dict[str, Any]:
         "suite": target.suite,
         "kind": "agent",
         "system_prompt": prompt,
-        "tools": render_tools(_catalog_tools(target.tools), ModelFormat.OPENAI),
+        "tools": [],
         "repeats": 1,
         "cases": CASES[target.name],
     }
