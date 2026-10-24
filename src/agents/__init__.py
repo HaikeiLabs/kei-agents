@@ -25,6 +25,8 @@ Usage:
 """
 
 from agents.agent_definitions import (
+    BUG_REPORT_TRIAGE_AGENT,
+    FIX_PROPOSAL_AGENT,
     HARNESS_AGENT_DEFINITIONS,
     ONBOARDING_E2E_TRIAGE_AGENT,
     PDE_SEARCH_AGENT,
@@ -92,6 +94,10 @@ from agents.connectors import (
     TITO_READ_TOOL_DEFINITIONS,
 )
 from agents.drive_write.tools import DRIVE_WRITE_TOOL_DEFINITIONS
+from agents.github.tools import (
+    GITHUB_FIX_ACTION_TOOL,
+    GITHUB_FIX_ACTION_TOOL_DEFINITIONS,
+)
 
 # Imported after connectors so the workflow registry's module-level
 # _register_builtin_workflows() sees the full CONNECTOR_READ_TOOL_DEFINITIONS
@@ -117,9 +123,13 @@ from agents.workflows import (
 
 __all__ = [
     "ALL_TOOL_DEFINITIONS",
+    "BUG_REPORT_TRIAGE_AGENT",
     "CONNECTOR_READ_TOOL_DEFINITIONS",
     "DRIVE_READ_TOOL_DEFINITIONS",
     "DRIVE_WRITE_TOOL_DEFINITIONS",
+    "FIX_PROPOSAL_AGENT",
+    "GITHUB_FIX_ACTION_TOOL",
+    "GITHUB_FIX_ACTION_TOOL_DEFINITIONS",
     "GITHUB_READ_TOOL_DEFINITIONS",
     "GMAIL_READ_TOOL_DEFINITIONS",
     "HARNESS_AGENT_DEFINITIONS",

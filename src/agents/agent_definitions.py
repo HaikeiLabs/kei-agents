@@ -200,6 +200,30 @@ _PEDRO_DATA_PERMISSIONS = (
 # reaches it through file_bug.
 _PEDRO_EXCLUDED_TOOLS = frozenset({*PEDRO_DEFAULT_GROUP_TOOLS, "linear.create_issue"})
 
+BUG_REPORT_TRIAGE_AGENT = AgentDefinition(
+    name="bug_report_triage",
+    harness=Harness.DISCORD,
+    description=(
+        "Read-only diagnosis of sanitized BugBot reports using provided "
+        "diagnostics and current source evidence"
+    ),
+    permissions=frozenset({Permission.GITHUB_READ}),
+    tools=(),
+    system_prompt_file="prompts/bug_report_triage.md",
+)
+
+FIX_PROPOSAL_AGENT = AgentDefinition(
+    name="fix_proposal",
+    harness=Harness.DISCORD,
+    description=(
+        "Propose a bounded draft fix for an explicitly requested BugBot "
+        "report through the scoped create_fix_pr harness action"
+    ),
+    permissions=frozenset({Permission.GITHUB_READ, Permission.GITHUB_WRITE}),
+    tools=(),
+    system_prompt_file="prompts/fix_proposal.md",
+)
+
 ONBOARDING_E2E_TRIAGE_AGENT = AgentDefinition(
     name="onboarding_e2e_triage",
     harness=Harness.DISCORD,
@@ -251,9 +275,13 @@ HARNESS_AGENT_DEFINITIONS: list[AgentDefinition] = [
     PDE_SEARCH_AGENT,
     PEDRO_AGENT,
     ONBOARDING_E2E_TRIAGE_AGENT,
+    BUG_REPORT_TRIAGE_AGENT,
+    FIX_PROPOSAL_AGENT,
 ]
 
 __all__ = [
+    "BUG_REPORT_TRIAGE_AGENT",
+    "FIX_PROPOSAL_AGENT",
     "HARNESS_AGENT_DEFINITIONS",
     "ONBOARDING_E2E_TRIAGE_AGENT",
     "PDE_SEARCH_AGENT",
