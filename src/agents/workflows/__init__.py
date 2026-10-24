@@ -9,6 +9,12 @@ enforces policy, and invokes provider adapters.
 
 from __future__ import annotations
 
+from agents.workflows.bug_to_linear_pr import (
+    BUG_TO_LINEAR_PR,
+    WorkflowPrincipal,
+    WorkflowSpec,
+    WorkflowStep,
+)
 from agents.workflows.finance import (
     FINANCE_WORKFLOW_SPECS,
     CRMLookup,
@@ -84,6 +90,7 @@ def __getattr__(name: str) -> object:
 
 
 __all__ = [
+    "BUG_TO_LINEAR_PR",
     "FINANCE_WORKFLOW_SPECS",
     "FUNDRAISING_WORKFLOW_SPECS",
     "PR_REVIEW_TOOL_DEPENDENCIES",
@@ -123,6 +130,9 @@ __all__ = [
     "ReviewAction",
     "ReviewActionKind",
     "StepPayload",
+    "WorkflowPrincipal",
+    "WorkflowSpec",
+    "WorkflowStep",
     "data_room_share_workflow",
     "egress_steps",
     "expense_report_workflow",

@@ -19,6 +19,7 @@ time.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -112,6 +113,27 @@ class WorkflowStep:
     timeout_seconds: int = 300
 
 
+@dataclass(frozen=True)
+class WorkflowPrincipal:
+    """Typed workflow invoker or named service principal selector.
+
+    ``invoker`` preserves the historical behavior. Any other value must be a
+    valid ``identity.service_principals.name``.
+    """
+
+    value: str = "invoker"
+
+    def __post_init__(self) -> None:
+        if (
+            self.value != "invoker"
+            and re.fullmatch(r"[a-z][a-z0-9-]{1,47}", self.value) is None
+        ):
+            raise ValueError(
+                "workflow principal must be 'invoker' or a service principal "
+                "name matching ^[a-z][a-z0-9-]{1,47}$"
+            )
+
+
 @dataclass
 class WorkflowSpec:
     """Complete workflow specification.
@@ -126,6 +148,7 @@ class WorkflowSpec:
     entry_step: str = ""
     steps: list[WorkflowStep] = field(default_factory=list)
     tags: list[str] = field(default_factory=list)
+    principal: WorkflowPrincipal = field(default_factory=WorkflowPrincipal)
 
 
 # ── Workflow steps ───────────────────────────────────────────────────────────
@@ -206,6 +229,7 @@ BUG_TO_LINEAR_PR = WorkflowSpec(
         _STEP_GITHUB_PR,
     ],
     tags=["bug", "linear", "github"],
+    principal=WorkflowPrincipal("pedro-bug-intake"),
 )
 
 
@@ -275,9 +299,6 @@ def _reachable_steps(spec: WorkflowSpec) -> set[str]:
 LINEAR_PRIORITIES = ["urgent", "high", "medium", "low", "none"]
 
 
-
-
-
 __all__ = [
     "BUG_TO_LINEAR_PR",
     "LINEAR_PRIORITIES",
@@ -287,6 +308,7 @@ __all__ = [
     "PRResult",
     "PRSpec",
     "Severity",
+    "WorkflowPrincipal",
     "WorkflowSpec",
     "WorkflowStep",
     "get_step",
