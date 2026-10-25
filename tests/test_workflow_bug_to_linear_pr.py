@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
+
+import pytest
+
 from agents.workflows.bug_to_linear_pr import (
     BUG_TO_LINEAR_PR,
     BugReport,
@@ -10,6 +14,7 @@ from agents.workflows.bug_to_linear_pr import (
     PRResult,
     PRSpec,
     Severity,
+    WorkflowPrincipal,
     WorkflowSpec,
     WorkflowStep,
     get_step,
@@ -176,6 +181,28 @@ class TestBugIntakeStepProperties:
         step = get_step(BUG_TO_LINEAR_PR, "bug_intake")
         assert step is not None
         assert step.next_steps == ["linear_ticket"]
+
+
+class TestWorkflowPrincipal:
+    def test_workflow_defaults_to_invoker(self) -> None:
+        spec = WorkflowSpec(name="test", description="test")
+        assert spec.principal == WorkflowPrincipal()
+        assert spec.principal.value == "invoker"
+
+    def test_named_service_principal_is_exposed(self) -> None:
+        spec = WorkflowSpec(
+            name="test",
+            description="test",
+            principal=WorkflowPrincipal("kei-bug-intake"),
+        )
+        assert spec.principal.value == "kei-bug-intake"
+        assert asdict(spec)["principal"] == {"value": "kei-bug-intake"}
+        assert BUG_TO_LINEAR_PR.principal.value == "kei-bug-intake"
+
+    @pytest.mark.parametrize("name", ["", "a", "Upper", "bad_name", "-bad", "a" * 49])
+    def test_invalid_service_principal_name_is_rejected(self, name: str) -> None:
+        with pytest.raises(ValueError, match="service principal name"):
+            WorkflowPrincipal(name)
 
 
 class TestWorkflowSpecStructure:

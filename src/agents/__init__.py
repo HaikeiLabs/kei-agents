@@ -27,6 +27,7 @@ from agents.policy import (
 )
 from agents.workflow_registry import WorkflowManifest, WorkflowRegistry
 from agents.workflows import (
+    BUG_TO_LINEAR_PR,
     WORKFLOW_DEFINITIONS,
     PRReviewFinding,
     PRReviewFindingSeverity,
@@ -36,12 +37,16 @@ from agents.workflows import (
     PRReviewWorkflowSpec,
     ReviewAction,
     ReviewActionKind,
+    WorkflowPrincipal,
+    WorkflowSpec,
+    WorkflowStep,
 )
 
 __version__ = "0.1.0"
 
 __all__ = [
     "BUG_REPORT_TRIAGE_AGENT",
+    "BUG_TO_LINEAR_PR",
     "FIX_PROPOSAL_AGENT",
     "GITHUB_FIX_ACTION_TOOL",
     "HARNESS_AGENT_DEFINITIONS",
@@ -71,7 +76,10 @@ __all__ = [
     "ReviewAction",
     "ReviewActionKind",
     "WorkflowManifest",
+    "WorkflowPrincipal",
     "WorkflowRegistry",
+    "WorkflowSpec",
+    "WorkflowStep",
     "check_tool_access",
     "create_user_context",
     "filter_accessible_tools",
