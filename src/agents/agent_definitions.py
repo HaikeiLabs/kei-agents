@@ -183,23 +183,15 @@ PEDRO_AGENT = AgentDefinition(
     harness=Harness.DISCORD,
     description=(
         "Pedro, the Discord agent: bug filing, wiki and web search, GitHub, "
-        "CRM/leads, Linear follow-ups, and the finance and fundraising workflows"
+        "Linear, and the governed Drive"
     ),
     permissions=frozenset(
         {
             Permission.GITHUB_READ,
             Permission.GITHUB_WRITE,
-            Permission.CRM_READ,
-            Permission.CRM_WRITE,
             Permission.LINEAR_READ,
             Permission.LINEAR_WRITE,
-            # The finance and fundraising workflows read documents and the
-            # fundraising data room through the governed Drive.
             Permission.DRIVE_READ,
-            Permission.FUNDRAISING_READ,
-            Permission.FUNDRAISING_WRITE,
-            Permission.FINANCE_READ,
-            Permission.FINANCE_WRITE,
             Permission.SEARCH_WIKI,
             Permission.WEB_SEARCH,
         }

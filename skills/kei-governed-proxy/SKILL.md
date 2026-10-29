@@ -1,6 +1,6 @@
 ---
 name: kei-governed-proxy
-description: Build or review agents that use the Kei tenant-side governed proxy for CRM, Linear, GitHub, or other connector work. Use this whenever an agent, Discord/Slack harness, workflow, connector tool, policy gate, credential reference, audit event, workspace/org scope, consent gate, or provider adapter is being added or changed.
+description: Build or review agents that use the Kei tenant-side governed proxy for Linear, GitHub, Drive, http_api, or other connector work. Use this whenever an agent, Discord/Slack harness, workflow, connector tool, policy gate, credential reference, audit event, workspace/org scope, consent gate, or provider adapter is being added or changed.
 ---
 
 # Kei governed-proxy agent skill
@@ -48,11 +48,12 @@ against your plan before considering it complete.
 5. Route every provider read/write through the governed invocation endpoint or
    its equivalent proxy command. Fail closed on missing proxy, denied policy,
    invalid scope, inactive connector, missing approval, or transport failure.
-6. Require explicit consent before projecting CRM context into another
-   provider, and require an approval reference for policy-controlled writes.
+6. Require explicit consent before projecting one connector's records into
+   another provider, and require an approval reference for policy-controlled
+   writes.
 7. Use deterministic idempotency keys for writes. Reconcile unknown outcomes
    before retrying and never blindly duplicate a provider mutation.
-8. Allowlist CRM fields for cross-provider projection. Redact contact data,
+8. Allowlist source fields for cross-provider projection. Redact contact data,
    notes, secrets, tokens, and arbitrary fields by default.
 9. Emit audit metadata (subject, org/workspace, agent, framework, capability,
    action, resource, approval, trace, idempotency, decision, and digests), not
@@ -97,12 +98,13 @@ the fix:
 Then propose the corrected, handlerless schema: semantic name, permission,
 resource kind, and delegated context (rule 1).
 
-### CRM-to-provider projection
+### Cross-provider projection
 
-Cross-provider data projection (e.g., CRM fields into a Linear task) must:
+Cross-provider data projection (e.g., fields of an account record read
+through an `http_api` connector into a Linear task) must:
 
-1. Require explicit consent before projecting CRM context into another
-   provider.
+1. Require explicit consent before projecting one connector's records into
+   another provider.
 2. Allowlist only the fields needed for the projection.
 3. Redact contact data, notes, secrets, tokens, and arbitrary fields by
    default.
@@ -129,9 +131,9 @@ Add synthetic tests for:
 - org/workspace isolation;
 - consent and approval gates;
 - idempotent replay and uncertain-write recovery;
-- CRM projection redaction and prompt-injection resistance;
+- cross-provider projection redaction and prompt-injection resistance;
 - audit attribution and payload/secret absence;
 - quarantined tools failing closed without provider calls.
 
-Use fake proxy transports and synthetic CRM/Linear fixtures. Do not contact live
+Use fake proxy transports and synthetic connector and Linear fixtures. Do not contact live
 providers or use customer data in unit or integration tests.

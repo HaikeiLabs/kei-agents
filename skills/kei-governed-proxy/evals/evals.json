@@ -3,14 +3,14 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Add a Discord tool that reads a CRM lead and creates a Linear follow-up task with approval.\n\nDo not execute anything — just explain in text.",
-      "expected_output": "A plan or implementation that routes both operations through the tenant-side proxy, derives scope from the harness key, redacts CRM fields, requires consent and approval, and tests idempotency and audit redaction.",
+      "prompt": "Add a Discord tool that reads a customer account record from an http_api connector and creates a Linear task with approval.\n\nDo not execute anything — just explain in text.",
+      "expected_output": "A plan or implementation that routes both operations through the tenant-side proxy, derives scope from the harness key, redacts source fields, requires consent and approval, and tests idempotency and audit redaction.",
       "files": [],
       "expectations": [
         "Both operations are routed through the tenant-side governed proxy invocation, not a direct provider client in the harness.",
         "Scope (tenant/org/workspace) is resolved from the authenticated harness key/proxy context, never accepted from the model.",
-        "CRM fields projected to Linear are allowlisted, with contact data, notes, and secrets redacted by default.",
-        "The Linear write requires an approval reference and the CRM projection requires explicit consent.",
+        "Source fields projected to Linear are allowlisted, with contact data, notes, and secrets redacted by default.",
+        "The Linear write requires an approval reference and the projection requires explicit consent.",
         "The plan uses a deterministic idempotency key for the write.",
         "The plan emits audit metadata (subject, decision, digests) rather than provider payloads or credentials."
       ],
@@ -32,14 +32,14 @@
           "regex": "harness key|harness's authenticated|proxy context|authenticated context|never from the model|not from the model|never from user input"
         },
         {
-          "text": "CRM fields projected to Linear are allowlisted, with contact data, notes, and secrets redacted by default.",
+          "text": "Source fields projected to Linear are allowlisted, with contact data, notes, and secrets redacted by default.",
           "contains_all": [
             "allowlist",
             "redact"
           ]
         },
         {
-          "text": "The Linear write requires an approval reference and the CRM projection requires explicit consent.",
+          "text": "The Linear write requires an approval reference and the projection requires explicit consent.",
           "contains_all": [
             "consent",
             "approval"
@@ -160,7 +160,7 @@
     },
     {
       "id": 4,
-      "prompt": "Our harness's kei-proxy sidecar is down during a deploy. A user asks the agent to update a CRM lead. What should the agent do, and what should the code guarantee?\n\nDo not execute anything — just explain in text.",
+      "prompt": "Our harness's kei-proxy sidecar is down during a deploy. A user asks the agent to update a customer account record. What should the agent do, and what should the code guarantee?\n\nDo not execute anything — just explain in text.",
       "expected_output": "Fail closed: a missing proxy, denied policy, invalid scope, inactive connector, missing approval, or transport failure blocks the call. No fallback to a direct provider client. Unknown write outcomes are reconciled before retrying, with deterministic idempotency keys so a provider mutation is never blindly duplicated.",
       "files": [],
       "expectations": [
@@ -207,7 +207,7 @@
     },
     {
       "id": 5,
-      "prompt": "What exactly goes into the audit event for a governed CRM read, and what must never appear in it?\n\nDo not execute anything — just explain in text.",
+      "prompt": "What exactly goes into the audit event for a governed http_api read, and what must never appear in it?\n\nDo not execute anything — just explain in text.",
       "expected_output": "Audit metadata: subject, org/workspace, agent, framework, capability, action, resource, approval, trace, idempotency, decision, and digests. Never: provider payloads, credentials, or secret values.",
       "files": [],
       "expectations": [
@@ -234,23 +234,23 @@
     },
     {
       "id": 6,
-      "prompt": "We want the agent to take a CRM contact's notes and include them in a Linear task description for the support team. Is that allowed by default?\n\nDo not execute anything — just explain in text.",
-      "expected_output": "No — projecting CRM context into another provider requires explicit consent, an allowlisted field set, and redaction of contact data, notes, secrets, tokens, and arbitrary fields by default.",
+      "prompt": "We want the agent to take a customer account record's notes and include them in a Linear task description for the support team. Is that allowed by default?\n\nDo not execute anything — just explain in text.",
+      "expected_output": "No — projecting one connector's records into another provider requires explicit consent, an allowlisted field set, and redaction of contact data, notes, secrets, tokens, and arbitrary fields by default.",
       "files": [],
       "expectations": [
-        "The response says the projection requires explicit consent before projecting CRM context into another provider.",
-        "The response says notes/contact data are redacted by default and only allowlisted CRM fields may be projected.",
+        "The response says the projection requires explicit consent before projecting one connector's records into another provider.",
+        "The response says notes/contact data are redacted by default and only allowlisted source fields may be projected.",
         "The response does not allow the projection by default."
       ],
       "checks": [
         {
-          "text": "The response says the projection requires explicit consent before projecting CRM context into another provider.",
+          "text": "The response says the projection requires explicit consent before projecting one connector's records into another provider.",
           "contains_all": [
             "consent"
           ]
         },
         {
-          "text": "The response says notes/contact data are redacted by default and only allowlisted CRM fields may be projected.",
+          "text": "The response says notes/contact data are redacted by default and only allowlisted source fields may be projected.",
           "contains_all": [
             "allowlist",
             "redact"

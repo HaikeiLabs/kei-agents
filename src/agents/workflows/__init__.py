@@ -1,8 +1,8 @@
 """Workflow specifications for Kei agents.
 
 Workflows define typed, harness-neutral step DAGs that compose governed
-connector capabilities (Drive, CRM, Linear) into domain-specific processes
-(finance, fundraising, GitHub PR review, leads).
+connector capabilities (Drive, Linear, GitHub) into domain-specific processes
+(bug to Linear PR, GitHub PR review, support).
 Each step captures domain intent only; the harness resolves bindings,
 enforces policy, and invokes provider adapters.
 """
@@ -14,43 +14,6 @@ from agents.workflows.bug_to_linear_pr import (
     WorkflowPrincipal,
     WorkflowSpec,
     WorkflowStep,
-)
-from agents.workflows.finance import (
-    FINANCE_WORKFLOW_SPECS,
-    CRMLookup,
-    CRMUpdate,
-    DriveArchive,
-    DriveRead,
-    FinanceEntity,
-    FinanceStepCategory,
-    FinanceWorkflowSpec,
-    FinanceWorkflowState,
-    FinanceWorkflowStep,
-    LinearTask,
-    Notify,
-    StepPayload,
-    egress_steps,
-    expense_report_workflow,
-    invoice_processing_workflow,
-    validate_read_first,
-    vendor_onboarding_workflow,
-)
-from agents.workflows.fundraising import (
-    FUNDRAISING_WORKFLOW_SPECS,
-    DataRoomRead,
-    DataRoomShare,
-    FundraisingWorkflowSpec,
-    FundraisingWorkflowStep,
-    InvestorLookup,
-    InvestorPipelineRead,
-    InvestorStage,
-    InvestorStageUpdate,
-    data_room_share_workflow,
-    fundraising_egress_steps,
-    investor_decision_workflow,
-    investor_outreach_workflow,
-    is_valid_stage_transition,
-    validate_fundraising_workflow,
 )
 from agents.workflows.github_pr_review import (
     PR_REVIEW_TOOL_DEPENDENCIES,
@@ -68,59 +31,10 @@ WORKFLOW_DEFINITIONS: list[PRReviewWorkflowSpec] = [
     PRReviewWorkflowSpec(),
 ]
 
-_LAZY_LEADS_EXPORTS = {
-    "ApprovalInfo",
-    "ApprovalStatus",
-    "DuplicateAction",
-    "DuplicateInfo",
-    "FailureInfo",
-    "FailureReason",
-    "LeadWorkflowStatus",
-}
-
-
-def __getattr__(name: str) -> object:
-    if name in _LAZY_LEADS_EXPORTS:
-        from agents.workflows import leads
-
-        value = getattr(leads, name)
-        globals()[name] = value
-        return value
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
 __all__ = [
     "BUG_TO_LINEAR_PR",
-    "FINANCE_WORKFLOW_SPECS",
-    "FUNDRAISING_WORKFLOW_SPECS",
     "PR_REVIEW_TOOL_DEPENDENCIES",
     "WORKFLOW_DEFINITIONS",
-    "ApprovalInfo",
-    "ApprovalStatus",
-    "CRMLookup",
-    "CRMUpdate",
-    "DataRoomRead",
-    "DataRoomShare",
-    "DriveArchive",
-    "DriveRead",
-    "DuplicateAction",
-    "DuplicateInfo",
-    "FailureInfo",
-    "FailureReason",
-    "FinanceEntity",
-    "FinanceStepCategory",
-    "FinanceWorkflowSpec",
-    "FinanceWorkflowState",
-    "FinanceWorkflowStep",
-    "FundraisingWorkflowSpec",
-    "FundraisingWorkflowStep",
-    "InvestorLookup",
-    "InvestorPipelineRead",
-    "InvestorStage",
-    "InvestorStageUpdate",
-    "LeadWorkflowStatus",
-    "LinearTask",
-    "Notify",
     "PRReviewFinding",
     "PRReviewFindingSeverity",
     "PRReviewInput",
@@ -129,19 +43,7 @@ __all__ = [
     "PRReviewWorkflowSpec",
     "ReviewAction",
     "ReviewActionKind",
-    "StepPayload",
     "WorkflowPrincipal",
     "WorkflowSpec",
     "WorkflowStep",
-    "data_room_share_workflow",
-    "egress_steps",
-    "expense_report_workflow",
-    "fundraising_egress_steps",
-    "investor_decision_workflow",
-    "investor_outreach_workflow",
-    "invoice_processing_workflow",
-    "is_valid_stage_transition",
-    "validate_fundraising_workflow",
-    "validate_read_first",
-    "vendor_onboarding_workflow",
 ]

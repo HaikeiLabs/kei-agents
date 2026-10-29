@@ -8,24 +8,9 @@ BUG_TO_LINEAR_PR: list[Case] = [
     no_tool("no-tool-how-it-works", "How does the bug to Linear to PR workflow work?"),
     no_tool("no-tool-needs-details", "I want to report something."),
 ]
-CRM_LINEAR_FOLLOWUP: list[Case] = [
-    no_tool("no-tool-what-is-it", "What is this follow-up workflow for?")
-]
-FINANCE: list[Case] = [
-    no_tool(
-        "no-tool-accounting-question",
-        "What's the difference between accrual and cash accounting?",
-    )
-]
-FUNDRAISING: list[Case] = [
-    no_tool("no-tool-term-question", "What does a pro-rata right mean in a term sheet?")
-]
 GITHUB_PR_REVIEW: list[Case] = [
     no_tool("no-tool-approve-is-read-only", "Approve PR #57 for me."),
     no_tool("no-tool-review-advice", "What makes a good code review?"),
-]
-LEADS: list[Case] = [
-    no_tool("no-tool-sales-question", "What's a good way to qualify a lead?")
 ]
 SUPPORT: list[Case] = [
     no_tool(
@@ -46,11 +31,7 @@ DRIVE_PUBLISH: list[Case] = [
 ]
 WORKFLOW_CASES: dict[str, list[Case]] = {
     "bug_to_linear_pr": BUG_TO_LINEAR_PR,
-    "crm_linear_followup": CRM_LINEAR_FOLLOWUP,
     "drive_publish": DRIVE_PUBLISH,
-    "finance": FINANCE,
-    "fundraising": FUNDRAISING,
     "github_pr_review": GITHUB_PR_REVIEW,
-    "leads": LEADS,
     "support": SUPPORT,
 }

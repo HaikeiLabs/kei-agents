@@ -33,7 +33,7 @@ Instructions for coding agents working in this repository.
   distributed proxy.
 - ABAC receives metadata/policy requests only and never customer payloads,
   results, or credentials.
-- GitHub, CRM, and Linear writes are agent action tools, not ABAC connector
+- GitHub and Linear writes are agent action tools, not ABAC connector
   capabilities.
 
 ## Hard rules
