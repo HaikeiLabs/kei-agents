@@ -292,11 +292,11 @@ def _register_builtin_workflows() -> WorkflowRegistry:
                 "compliance_scope": "read-only",
             },
         ),
-        # -- HTTP API / CRM governed connector ---------------------------
+        # -- HTTP API governed connector ---------------------------
         WorkflowManifest(
             name="http_api.record_read",
             version="0.1.0",
-            purpose="List and read records from the governed HTTP API / CRM connection",
+            purpose="List and read records from the governed HTTP API connection",
             tool_dependencies=[
                 "http_api.list_records",
                 "http_api.get_record",

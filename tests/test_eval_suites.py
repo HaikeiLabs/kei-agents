@@ -29,7 +29,7 @@ class TestExporter:
     def test_one_suite_per_target(self) -> None:
         assert sorted(build_suites()) == sorted(f"{t.name}.json" for t in EVAL_TARGETS)
         assert len(AGENT_TARGETS) == 2
-        assert len(WORKFLOW_TARGETS) == 8
+        assert len(WORKFLOW_TARGETS) == 4
 
     def test_suites_rely_on_runtime_tool_inference(self) -> None:
         for suite in build_suites().values():

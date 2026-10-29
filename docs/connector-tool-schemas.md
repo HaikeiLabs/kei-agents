@@ -10,6 +10,6 @@ tenant-side `kei-proxy`. Provider execution and customer data retrieval stay
 inside that tenant-side proxy. ABAC receives policy metadata only; it never
 receives customer payloads, results, or credentials.
 
-GitHub, CRM, and Linear writes are agent action tools rather than connector
+GitHub and Linear writes are agent action tools rather than connector
 capabilities. See [the Google Drive write flow](drive-write.md) for the
 harness-side Drive action.

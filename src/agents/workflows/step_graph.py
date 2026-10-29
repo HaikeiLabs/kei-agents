@@ -1,6 +1,6 @@
 """Structural validation shared by workflow specs built from typed step DAGs.
 
-A domain spec (finance, fundraising) supplies which payload types are reads
+A domain spec supplies which payload types are reads
 and mutations, and which permissions those steps must hold;
 :func:`validate_step_graph` checks the graph. It validates *structure* only
 — a spec that passes is well formed, not permitted. Authorization is decided
@@ -139,8 +139,8 @@ def validate_step_graph(
     allowed = " or ".join(p.value for p in mutation_permissions)
     for step in steps:
         permission = step.permission
-        # Permission is a str enum, so a bare "finance_write" compares equal to
-        # Permission.FINANCE_WRITE; check the type so typos and untyped values
+        # Permission is a str enum, so a bare "linear_write" compares equal to
+        # a Permission; check the type so typos and untyped values
         # cannot slip past the policy engine.
         if not isinstance(permission, Permission):
             violations.append(

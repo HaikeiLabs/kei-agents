@@ -47,11 +47,7 @@ WORKFLOW_TARGETS: tuple[EvalTarget, ...] = tuple(
     _workflow(name)
     for name in (
         "bug_to_linear_pr",
-        "crm_linear_followup",
-        "finance",
-        "fundraising",
         "github_pr_review",
-        "leads",
         "support",
         "drive_publish",
     )

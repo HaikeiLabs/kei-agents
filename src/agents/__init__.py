@@ -12,7 +12,6 @@ from agents.agent_definitions import (
     load_system_prompt,
     validate_agent_definitions,
 )
-from agents.crm import CRMAdapter, Lead, LeadSource, LeadStatus
 from agents.github import GovernanceConfig, MockGitHubAdapter
 from agents.github.tools import GITHUB_FIX_ACTION_TOOL
 from agents.permissions import Permission
@@ -56,12 +55,8 @@ __all__ = [
     "WORKFLOW_DEFINITIONS",
     "AgentDefinition",
     "AuthorizationResult",
-    "CRMAdapter",
     "GovernanceConfig",
     "Harness",
-    "Lead",
-    "LeadSource",
-    "LeadStatus",
     "MockGitHubAdapter",
     "PRReviewFinding",
     "PRReviewFindingSeverity",

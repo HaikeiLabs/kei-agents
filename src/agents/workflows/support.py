@@ -177,7 +177,7 @@ SUPPORT_WORKFLOW = SupportWorkflow(
     description=(
         "Harness-neutral support-management workflow that composes semantic "
         "reads from Notion (ticket store), Drive (customer documents), and "
-        "custom API (CRM/account records), applies escalation and redaction "
+        "custom API (account records), applies escalation and redaction "
         "rules, and executes writes. Provider execution is delegated to the "
         "tenant-side distributed proxy."
     ),
@@ -229,7 +229,7 @@ SUPPORT_WORKFLOW = SupportWorkflow(
             resource="records",
             entity="customer_account",
             description=(
-                "CRM record maps to the customer account (billing tier, "
+                "The account record maps to the customer account (billing tier, "
                 "plan, contact metadata). The governed connection preset "
                 "binds the endpoint and entity."
             ),
@@ -303,7 +303,7 @@ SUPPORT_WORKFLOW = SupportWorkflow(
             connector=_HTTP_API,
             description=(
                 "Read the customer account record from the governed "
-                "http_api/CRM connection for billing tier, plan, and "
+                "http_api connection for billing tier, plan, and "
                 "contact metadata."
             ),
             param_hints=("entity", "record_id"),
@@ -312,7 +312,7 @@ SUPPORT_WORKFLOW = SupportWorkflow(
                 on_failure=_FALLBACK,
                 fallback_step="fetch_tickets",
                 description=(
-                    "If the CRM read fails, fall back to the ticket data "
+                    "If the account read fails, fall back to the ticket data "
                     "already fetched from Notion; the workflow continues "
                     "with reduced account context."
                 ),
@@ -344,7 +344,7 @@ SUPPORT_WORKFLOW = SupportWorkflow(
             connector=_HTTP_API,
             description=(
                 "Create a resolution log record in the governed "
-                "http_api/CRM connection."
+                "http_api connection."
             ),
             param_hints=("entity", "record_json"),
             failure_state=FailureState(
@@ -458,7 +458,7 @@ SUPPORT_WORKFLOW = SupportWorkflow(
             on_failure=_FALLBACK,
             fallback_step="fetch_tickets",
             description=(
-                "If the CRM read fails, fall back to the ticket data "
+                "If the account read fails, fall back to the ticket data "
                 "already fetched from Notion; the workflow continues "
                 "with reduced account context."
             ),

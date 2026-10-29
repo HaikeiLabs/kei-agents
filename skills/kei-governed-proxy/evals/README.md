@@ -55,9 +55,9 @@ Benchmarks are committed under `evals/results/<date>-<profile>/` (`benchmark.{js
 
 | # | Case | deepseek-v4-flash | qwen3.8-27b |
 |---|---|---|---|
-| 1 | Add a Discord tool that reads a CRM lead and creates a Linear follow-u | pass | pass |
+| 1 | Add a Discord tool that reads a customer account record from an http_ | pass | pass |
 | 2 | A legacy tool has a local role permission and a provider client handle | pass | pass |
 | 3 | Review a connector tool schema for tenant_id, workspace_id, an API tok | pass | pass |
 | 4 | Our harness's kei-proxy sidecar is down during a deploy. A user asks t | pass | pass |
-| 5 | What exactly goes into the audit event for a governed CRM read, and wh | pass | pass |
-| 6 | We want the agent to take a CRM contact's notes and include them in a  | pass | pass |
+| 5 | What exactly goes into the audit event for a governed http_api read, a | pass | pass |
+| 6 | We want the agent to take a customer account record's notes and inclu | pass | pass |
