@@ -1,5 +1,20 @@
 # Kei Agents
 
+> **DEPRECATED: this repository is deprecated.** It was an example repository
+> for building agents on Haikei Labs tooling and is no longer being developed
+> or recommended for new work.
+>
+> - **What still works:** existing pins and already-published versions keep
+>   working. Nothing is removed or yanked by this change, and it is not a
+>   breaking change.
+> - **What to use instead:** for building agents and tool calls on Haikei Labs
+>   tooling, the recommended path is the [Agentware SDK](https://github.com/HaikeiLabs/Agentware).
+>   No replacement for the example agents in this repository has been decided
+>   yet.
+> - **Questions:** open an issue on this repository. Security reports follow
+>   [SECURITY.md](SECURITY.md) (a private security advisory, or
+>   <team@kei.ai>).
+
 Agent identity, permission, action adapter, and workflow metadata for the Kei
 platform.
 
